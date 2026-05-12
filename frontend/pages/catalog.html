@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Katalogs — AudioBooks</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/player.css">
+  <style>
+    .catalog-layout {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 32px;
+      padding: 40px 0 60px;
+    }
+    @media (max-width: 900px) {
+      .catalog-layout { grid-template-columns: 1fr; }
+      .filters-sidebar { position: static !important; }
+    }
+
+    /* Sidebar */
+    .filters-sidebar {
+      position: sticky;
+      top: calc(var(--nav-h) + 20px);
+      align-self: start;
+    }
+    .filters-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+    }
+    .filters-title {
+      font-weight: 600;
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+    .filter-section { margin-bottom: 24px; }
+    .filter-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      display: block;
+    }
+    .filter-reset {
+      font-size: 0.8rem;
+      color: var(--amber);
+      cursor: pointer;
+      margin-top: 16px;
+      text-align: center;
+      display: block;
+    }
+    .filter-reset:hover { color: var(--amber-light); }
+
+    /* Search bar */
+    .search-bar {
+      position: relative;
+      margin-bottom: 24px;
+    }
+    .search-bar input {
+      padding-left: 44px;
+      font-size: 1rem;
+    }
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 1rem;
+      pointer-events: none;
+    }
+
+    /* Sort bar */
+    .sort-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .results-count { font-size: 0.875rem; color: var(--text-muted); }
+
+    /* Mobile filter toggle */
+    .filter-toggle {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 900px) { .filter-toggle { display: flex; } }
+
+    .active-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .filter-tag {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: var(--amber-glow);
+      border: 1px solid var(--border-amber);
+      border-radius: 20px;
+      font-size: 0.78rem;
+      color: var(--amber);
+      cursor: pointer;
+    }
+    .filter-tag:hover { background: var(--amber-glow2); }
+  </style>
+</head>
+<body>
+  <div class="main-content">
+    <div class="container">
+      <div style="padding-top:32px">
+        <h1 class="section-title" data-i18n="catalog_title" style="margin-bottom:8px">Katalogs</h1>
+        <p class="text-muted text-sm" id="results-count"></p>
+      </div>
+
+      <div class="catalog-layout">
+        <!-- ── Filters sidebar ────────────────────────── -->
+        <aside class="filters-sidebar">
+          <div class="filters-card">
+            <div class="filters-title">🔧 Filtri</div>
+
+            <!-- Search (also in sidebar on mobile) -->
+            <div class="filter-section">
+              <div class="search-bar">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="search-input" class="form-control"
+                       data-i18n-attr="placeholder" data-i18n="search_placeholder"
+                       placeholder="Meklēt...">
+              </div>
+            </div>
+
+            <div class="filter-section">
+              <label class="filter-label" data-i18n="filter_genre">Žanrs</label>
+              <select id="filter-genre" class="form-control">
+                <option value="" data-i18n="all_genres">Visi žanri</option>
+              </select>
+            </div>
+
+            <div class="filter-section">
+              <label class="filter-label" data-i18n="filter_language">Valoda</label>
+              <select id="filter-language" class="form-control">
+                <option value="" data-i18n="all_languages">Visas valodas</option>
+              </select>
+            </div>
+
+            <div class="filter-section">
+              <label class="filter-label" data-i18n="filter_rating">Min. vērtējums</label>
+              <select id="filter-rating" class="form-control">
+                <option value="">Jebkurš</option>
+                <option value="4.5">⭐ 4.5+</option>
+                <option value="4">⭐ 4.0+</option>
+                <option value="3">⭐ 3.0+</option>
+              </select>
+            </div>
+
+            <div class="filter-section">
+              <label class="filter-label" data-i18n="filter_duration">Maks. ilgums (min)</label>
+              <select id="filter-duration" class="form-control">
+                <option value="">Jebkurš</option>
+                <option value="60">līdz 1h</option>
+                <option value="180">līdz 3h</option>
+                <option value="360">līdz 6h</option>
+                <option value="720">līdz 12h</option>
+              </select>
+            </div>
+
+            <button class="filter-reset" id="reset-filters" onclick="resetFilters()">✕ Atiestatīt filtrus</button>
+          </div>
+        </aside>
+
+        <!-- ── Results ────────────────────────────────── -->
+        <div>
+          <!-- Sort bar -->
+          <div class="sort-bar">
+            <div id="results-info" class="results-count"></div>
+            <div class="flex items-center gap-8">
+              <span class="text-sm text-muted" data-i18n="sort_by">Kārtot</span>
+              <select id="sort-select" class="form-control" style="width:auto;padding:7px 12px">
+                <option value="listen_count" data-i18n="sort_popular">Popularitātes</option>
+                <option value="rating"       data-i18n="sort_rating">Vērtējuma</option>
+                <option value="published_at" data-i18n="sort_newest">Jaunāko</option>
+                <option value="title"        data-i18n="sort_title">Nosaukuma</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Active filter tags -->
+          <div class="active-filters" id="active-filters"></div>
+
+          <!-- Grid -->
+          <div id="books-grid" class="books-grid"></div>
+
+          <!-- Pagination -->
+          <div id="pagination" class="pagination"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/i18n.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/player.js"></script>
+  <script src="../js/nav.js"></script>
+  <script>
+    let currentPage = 1;
+    let totalPages  = 1;
+    let searchTimer = null;
+
+    // Read URL params on load
+    const urlParams = new URLSearchParams(window.location.search);
+
+    function getFilters() {
+      return {
+        q:           document.getElementById('search-input').value.trim(),
+        genre_id:    document.getElementById('filter-genre').value,
+        language_id: document.getElementById('filter-language').value,
+        min_rating:  document.getElementById('filter-rating').value,
+        max_duration:document.getElementById('filter-duration').value,
+        sort:        document.getElementById('sort-select').value,
+        page:        currentPage,
+        limit:       24,
+      };
+    }
+
+    function renderBookCard(book) {
+      const cover = book.cover_url
+        ? `<img class="book-cover" src="http://localhost:3000${book.cover_url}" alt="${book.title}" loading="lazy">`
+        : `<div class="book-cover-placeholder">📚</div>`;
+      const stars = book.rating > 0 ? `⭐ ${parseFloat(book.rating).toFixed(1)}` : '';
+      const dur   = book.duration_sec > 0 ? formatTime(book.duration_sec) : '';
+      return `
+      <div class="book-card card" onclick="location.href='book.html?id=${book.id}'">
+        ${cover}
+        <button class="book-card-play" onclick="event.stopPropagation(); quickPlay(${book.id})">▶</button>
+        <div class="book-card-body">
+          <div class="book-card-title">${book.title}</div>
+          <div class="book-card-author">${book.author_name || ''}</div>
+          <div class="book-card-meta">
+            ${stars ? `<span class="book-card-rating">${stars}</span>` : ''}
+            ${dur   ? `<span>⏱ ${dur}</span>` : ''}
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function formatTime(sec) {
+      if (!sec || isNaN(sec)) return '0:00';
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = Math.floor(sec % 60);
+      return h > 0
+        ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+        : `${m}:${String(s).padStart(2,'0')}`;
+    }
+
+    async function loadBooks() {
+      const grid = document.getElementById('books-grid');
+      grid.innerHTML = Array(8).fill('<div class="skeleton" style="aspect-ratio:2/3;border-radius:12px"></div>').join('');
+
+      try {
+        const filters = getFilters();
+        // Remove empty values
+        Object.keys(filters).forEach(k => { if (!filters[k]) delete filters[k]; });
+        filters.page  = currentPage;
+        filters.limit = 24;
+
+        const { books, pagination } = await api.books.list(filters);
+        totalPages = pagination.pages;
+
+        if (!books.length) {
+          grid.innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1">
+            <div class="empty-state-icon">📭</div>
+            <h3>${t('no_books')}</h3>
+          </div>`;
+        } else {
+          grid.innerHTML = books.map(renderBookCard).join('');
+        }
+
+        document.getElementById('results-info').textContent =
+          `${pagination.total} grāmatas`;
+
+        renderPagination(pagination);
+      } catch (err) {
+        grid.innerHTML = `<p class="text-muted" style="grid-column:1/-1">Error: ${err.message}</p>`;
+      }
+    }
+
+    function renderPagination(pagination) {
+      const el = document.getElementById('pagination');
+      if (pagination.pages <= 1) { el.innerHTML = ''; return; }
+
+      let html = '';
+      html += `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage<=1?'disabled':''}>‹</button>`;
+
+      for (let p = Math.max(1, currentPage-2); p <= Math.min(pagination.pages, currentPage+2); p++) {
+        html += `<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+      }
+
+      html += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage>=pagination.pages?'disabled':''}>›</button>`;
+      el.innerHTML = html;
+    }
+
+    function goPage(p) {
+      currentPage = p;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      loadBooks();
+    }
+
+    function resetFilters() {
+      document.getElementById('search-input').value    = '';
+      document.getElementById('filter-genre').value    = '';
+      document.getElementById('filter-language').value = '';
+      document.getElementById('filter-rating').value   = '';
+      document.getElementById('filter-duration').value = '';
+      currentPage = 1;
+      loadBooks();
+    }
+
+    async function quickPlay(bookId) {
+      if (!api.isLoggedIn()) { showToast(t('login_required'), 'info'); return; }
+      try {
+        const { book } = await api.books.get(bookId);
+        Player.play(book, book.parts, 0, book.user_progress?.progress_sec || 0);
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    // ── Load genres & languages into selects ──────────────
+    let _genres = [], _languages = [];
+
+    function fillSelects() {
+      const lang = i18n.current;
+      const gSel = document.getElementById('filter-genre');
+      const selG = gSel.value;
+      // Keep first option
+      while (gSel.options.length > 1) gSel.remove(1);
+      _genres.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g.id;
+        opt.textContent = g['name_' + lang] || g.name_en;
+        gSel.appendChild(opt);
+      });
+      gSel.value = selG;
+
+      const lSel = document.getElementById('filter-language');
+      const selL = lSel.value;
+      while (lSel.options.length > 1) lSel.remove(1);
+      _languages.forEach(l => {
+        const opt = document.createElement('option');
+        opt.value = l.id;
+        opt.textContent = l['name_' + lang] || l.name_en;
+        lSel.appendChild(opt);
+      });
+      lSel.value = selL;
+    }
+
+    async function loadMeta() {
+      try { const r = await api.books.genres();    _genres    = r.genres;    } catch {}
+      try { const r = await api.books.languages(); _languages = r.languages; } catch {}
+      fillSelects();
+
+      // Apply URL params
+      if (urlParams.get('genre_id')) document.getElementById('filter-genre').value  = urlParams.get('genre_id');
+      if (urlParams.get('sort'))     document.getElementById('sort-select').value   = urlParams.get('sort');
+      if (urlParams.get('q'))        document.getElementById('search-input').value  = urlParams.get('q');
+
+      loadBooks();
+    }
+
+    // Reload selects on language change
+    const _origSet = i18n.set.bind(i18n);
+    i18n.set = function(lang) { _origSet(lang); fillSelects(); };
+
+    // ── Event listeners ───────────────────────────────────
+    document.getElementById('search-input').addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => { currentPage = 1; loadBooks(); }, 400);
+    });
+
+    ['filter-genre','filter-language','filter-rating','filter-duration','sort-select'].forEach(id => {
+      document.getElementById(id)?.addEventListener('change', () => { currentPage = 1; loadBooks(); });
+    });
+
+    loadMeta();
+  </script>
+</body>
+</html>

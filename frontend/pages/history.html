@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vēsture — AudioBooks</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/player.css">
+  <style>
+    .history-page { padding: 48px 0 80px; }
+
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 36px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    /* ── In-progress card ─────────────────────────────── */
+    .history-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      margin-bottom: 12px;
+      overflow: hidden;
+      transition: border-color var(--transition);
+    }
+    .history-card:hover { border-color: var(--border-amber); }
+
+    .history-card-inner {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+    }
+
+    /* Cover */
+    .hc-cover {
+      width: 80px;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .hc-cover img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .hc-cover-ph {
+      width: 80px; height: 100%;
+      min-height: 100px;
+      background: linear-gradient(135deg, var(--bg-elevated), var(--bg-hover));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem;
+    }
+
+    /* Info */
+    .hc-info {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .hc-title {
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      line-height: 1.3;
+    }
+    .hc-title:hover { color: var(--amber); }
+    .hc-author { font-size: 0.82rem; color: var(--amber); }
+
+    /* Chapter info (in-progress) */
+    .hc-chapter {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      background: var(--bg-elevated);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      width: fit-content;
+    }
+    .hc-chapter-icon { color: var(--amber); }
+
+    /* Timeline */
+    .hc-timeline {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 4px;
+    }
+    .hc-timeline-bar {
+      flex: 1;
+      height: 6px;
+      background: var(--bg-hover);
+      border-radius: 3px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: height var(--transition);
+    }
+    .hc-timeline-bar:hover { height: 8px; }
+    .hc-timeline-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--amber-dark), var(--amber));
+      border-radius: 3px;
+      position: relative;
+    }
+    .hc-timeline-fill::after {
+      content: '';
+      position: absolute;
+      right: -4px; top: 50%;
+      transform: translateY(-50%);
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--amber-light);
+    }
+    .hc-time {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Action button */
+    .hc-action {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 16px 0 0;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    /* Info must not overflow */
+    .hc-info {
+      flex: 1;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .hc-title {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .hc-title:hover { color: var(--amber); }
+    .hc-author { font-size: 0.82rem; color: var(--amber); }
+
+    /* ── Completed card ────────────────────────────────── */
+    .history-card.completed {
+      border-color: rgba(34, 197, 94, 0.2);
+    }
+    .history-card.completed:hover {
+      border-color: rgba(34, 197, 94, 0.4);
+    }
+    .hc-completed-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #22C55E;
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.25);
+      border-radius: 20px;
+      padding: 4px 10px;
+      width: fit-content;
+    }
+
+    /* Section headers */
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin: 32px 0 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    @media (max-width: 600px) {
+      .hc-cover { width: 60px; }
+      .hc-info { padding: 14px; }
+      .hc-action { padding: 0 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="main-content">
+    <div class="container">
+      <div class="history-page">
+        <div class="page-header">
+          <div>
+            <h1 class="section-title" data-i18n="history_title">Klausīšanās Vēsture</h1>
+            <p class="text-sm text-muted" style="margin-top:4px" id="history-count"></p>
+          </div>
+          <button class="btn btn-danger btn-sm" onclick="clearHistory()" id="clear-btn" style="display:none">
+            🗑 <span data-i18n="clear_history">Dzēst Vēsturi</span>
+          </button>
+        </div>
+
+        <div id="history-content">
+          <div class="loading-block"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/i18n.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/player.js"></script>
+  <script src="../js/nav.js"></script>
+  <script src="../js/confirm-modal.js"></script>
+  <script>
+    if (!api.isLoggedIn()) window.location.href = 'login.html';
+
+    const SECTION_LABELS = {
+      lv: { inProgress: '▶ Turpinu klausīties', completed: '✓ Pabeigtas' },
+      ru: { inProgress: '▶ Продолжаю слушать', completed: '✓ Прослушано' },
+      en: { inProgress: '▶ In Progress',        completed: '✓ Completed' },
+    };
+
+    function label() { return SECTION_LABELS[i18n.current] || SECTION_LABELS.lv; }
+
+    function fmtTime(sec) {
+      if (!sec || sec < 0) return '0:00';
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = Math.floor(sec % 60);
+      if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      return `${m}:${String(s).padStart(2,'0')}`;
+    }
+
+    function fmtDur(sec) {
+      return fmtTime(sec);
+    }
+
+    async function loadHistory() {
+      const content = document.getElementById('history-content');
+      try {
+        const { history } = await api.users.history({ limit: 100 });
+
+        if (!history.length) {
+          content.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state-icon">🎧</div>
+              <h3 data-i18n="no_reviews">Nav klausīšanās vēstures</h3>
+              <a href="catalog.html" class="btn btn-primary" style="margin-top:20px">
+                <span data-i18n="hero_cta_browse">Skatīt Katalogs</span>
+              </a>
+            </div>`;
+          i18n.apply();
+          return;
+        }
+
+        document.getElementById('clear-btn').style.display = 'flex';
+        document.getElementById('history-count').textContent = `${history.length} ${i18n.current === 'ru' ? 'записей' : i18n.current === 'en' ? 'entries' : 'ieraksti'}`;
+
+        const inProgress = history.filter(h => {
+          if (h.completed) return false;
+          const pct = h.duration_sec > 0 ? (h.progress_sec / h.duration_sec) * 100 : 0;
+          return pct < 100;
+        });
+        const completed = history.filter(h => {
+          if (h.completed) return true;
+          const pct = h.duration_sec > 0 ? (h.progress_sec / h.duration_sec) * 100 : 0;
+          return pct >= 100;
+        });
+
+        let html = '';
+
+        // ── In-progress section ──────────────────────────
+        if (inProgress.length) {
+          html += `<div class="section-label">${label().inProgress}</div>`;
+          html += inProgress.map(h => renderInProgress(h)).join('');
+        }
+
+        // ── Completed section ────────────────────────────
+        if (completed.length) {
+          html += `<div class="section-label">${label().completed}</div>`;
+          html += completed.map(h => renderCompleted(h)).join('');
+        }
+
+        content.innerHTML = html;
+        i18n.apply();
+
+      } catch (e) {
+        content.innerHTML = `<p class="text-muted">${e.message}</p>`;
+      }
+    }
+
+    function renderInProgress(h) {
+      const totalSec = parseInt(h.duration_sec) || 0;
+      const progSec  = parseInt(h.progress_sec) || 0;
+      const pct = totalSec > 0 ? Math.min(100, Math.round((progSec / totalSec) * 100)) : 0;
+
+      const coverHtml = h.cover_url
+        ? `<img src="http://localhost:3000${h.cover_url}" alt="" style="width:80px;height:100%;object-fit:cover;display:block">`
+        : `<div class="hc-cover-ph">📚</div>`;
+
+      const chapterWord = i18n.current === 'ru' ? 'Глава' : i18n.current === 'en' ? 'Chapter' : 'Daļa';
+      const partLabel = h.part_title
+        ? `${chapterWord}: ${h.part_title}`
+        : (h.part_number ? `${chapterWord} ${h.part_number}` : '');
+
+      const continueLabel = i18n.current === 'ru' ? 'Продолжить' : i18n.current === 'en' ? 'Continue' : 'Turpināt';
+      const progressLabel = i18n.current === 'ru' ? 'Прослушано' : i18n.current === 'en' ? 'Listened' : 'Noklausīts';
+
+      // "2:02 / 1h 30m" или просто "2:02" если нет общего времени
+      const totalStr = totalSec > 0 ? fmtTime(totalSec) : '';
+      const timeStr  = totalStr
+        ? `${fmtTime(progSec)} / ${totalStr}`
+        : fmtTime(progSec);
+
+      return `
+      <div class="history-card" data-book-id="${h.book_id}">
+        <div class="history-card-inner">
+          <div class="hc-cover" style="cursor:pointer" onclick="location.href='book.html?id=${h.book_id}'">${coverHtml}</div>
+          <div class="hc-info">
+            <div class="hc-title" onclick="location.href='book.html?id=${h.book_id}'">${h.title}</div>
+            <div class="hc-author">${h.author_name || ''}</div>
+            ${partLabel ? `
+            <div class="hc-chapter">
+              <span class="hc-chapter-icon">🎵</span>
+              <span>${partLabel}</span>
+            </div>` : ''}
+            <div style="margin-top:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <span class="badge badge-amber">${pct}%</span>
+              <span style="font-size:0.78rem;color:var(--text-muted)">${progressLabel}: ${timeStr}</span>
+            </div>
+          </div>
+          <div class="hc-action">
+            <a href="book.html?id=${h.book_id}" class="btn btn-primary">▶ ${continueLabel}</a>
+            <button class="btn btn-secondary btn-sm" onclick="deleteEntry(${h.id}, event)" title="${i18n.current==='ru'?'Удалить':'i18n.current'==='en'?'Delete':'Dzēst'}">🗑</button>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function renderCompleted(h) {
+      const totalSec = parseInt(h.duration_sec) || 0;
+      const coverHtml = h.cover_url
+        ? `<img src="http://localhost:3000${h.cover_url}" alt="" style="width:80px;height:100%;object-fit:cover;display:block">`
+        : `<div class="hc-cover-ph">📚</div>`;
+
+      const listenedLabel = i18n.current === 'ru' ? 'Прослушано' : i18n.current === 'en' ? 'Completed' : 'Pabeigts';
+      const relistenLabel = i18n.current === 'ru' ? 'Слушать снова' : i18n.current === 'en' ? 'Listen again' : 'Klausīties vēlreiz';
+
+      return `
+      <div class="history-card completed">
+        <div class="history-card-inner">
+          <div class="hc-cover" style="cursor:pointer" onclick="location.href='book.html?id=${h.book_id}'">${coverHtml}</div>
+          <div class="hc-info">
+            <div class="hc-title" onclick="location.href='book.html?id=${h.book_id}'">${h.title}</div>
+            <div class="hc-author">${h.author_name || ''}</div>
+            <div class="hc-completed-badge">
+              ✓ ${listenedLabel}${totalSec > 0 ? ` · ${fmtDur(totalSec)}` : ''}
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">
+              ${new Date(h.listened_at).toLocaleDateString()}
+            </div>
+          </div>
+          <div class="hc-action">
+            <a href="book.html?id=${h.book_id}" class="btn btn-secondary btn-sm">↺ ${relistenLabel}</a>
+            <button class="btn btn-secondary btn-sm" onclick="deleteEntry(${h.id}, event)">🗑</button>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    async function deleteEntry(historyId, event) {
+      event.preventDefault();
+      event.stopPropagation();
+      const lang = i18n.current;
+      const ok = await confirmModal({
+        title: lang==='ru' ? 'Удалить запись?' : lang==='en' ? 'Remove entry?' : 'Dzēst ierakstu?',
+        text:  lang==='ru' ? 'Запись будет удалена из истории.' : lang==='en' ? 'This entry will be removed from history.' : 'Ieraksts tiks dzēsts no vēstures.',
+        icon: '🗑️',
+      });
+      if (!ok) return;
+      try {
+        await api.request('DELETE', `/users/me/history/${historyId}`);
+        showToast(lang==='ru'?'Удалено':lang==='en'?'Removed':'Dzēsts', 'success');
+        loadHistory();
+      } catch(e) { showToast(e.message, 'error'); }
+    }
+
+    async function clearHistory() {
+      const ok = await confirmModal({
+        title: t('clear_history'),
+        text: i18n.current === 'ru' ? 'Вся история будет удалена. Это нельзя отменить.'
+            : i18n.current === 'en' ? 'All history will be deleted. This cannot be undone.'
+            : 'Visa vēsture tiks dzēsta. Šo nevar atcelt.',
+        icon: '🗑️',
+        confirmText: t('clear_history'),
+        confirmClass: 'btn-danger',
+      });
+      if (!ok) return;
+      try {
+        await api.users.clearHistory();
+        showToast(t('clear_history') + '!', 'success');
+        loadHistory();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    // Reload on language change
+    const _origSet = i18n.set.bind(i18n);
+    i18n.set = function(lang) { _origSet(lang); loadHistory(); };
+
+    loadHistory();
+  </script>
+</body>
+</html>

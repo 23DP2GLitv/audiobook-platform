@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Augšupielādēt — AudioBooks</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/player.css">
+  <style>
+    .upload-page { max-width: 760px; margin: 0 auto; padding: 48px 0 80px; }
+    .upload-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 40px; }
+    .genre-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+    .genre-chip {
+      padding: 8px 12px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border); background: var(--bg-input);
+      color: var(--text-secondary); font-size: 0.82rem; cursor: pointer;
+      transition: all var(--transition); display: flex; align-items: center; gap: 6px; user-select: none;
+    }
+    .genre-chip:hover { border-color: var(--amber); color: var(--text-primary); }
+    .genre-chip.selected { border-color: var(--amber); background: var(--amber-glow); color: var(--amber); }
+    .dropzone {
+      border: 2px dashed var(--border); border-radius: var(--radius-lg);
+      padding: 32px; text-align: center; cursor: pointer;
+      transition: all var(--transition); position: relative;
+    }
+    .dropzone:hover, .dropzone.drag-over { border-color: var(--amber); background: var(--amber-glow2); }
+    .dropzone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .cover-preview { display: none; align-items: center; gap: 16px; margin-top: 12px; }
+    .cover-preview.visible { display: flex; }
+    .cover-preview img { width: 80px; height: 120px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+    .audio-file-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 8px; }
+    .audio-file-title input { width: 100%; padding: 6px 10px; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 0.85rem; margin-top: 4px; }
+    .audio-file-title input:focus { border-color: var(--amber); outline: none; }
+    .audio-file-remove { color: var(--text-muted); padding: 4px 8px; border-radius: 4px; transition: all var(--transition); }
+    .audio-file-remove:hover { color: #EF4444; background: rgba(239,68,68,0.1); }
+    .upload-progress-wrap { margin-top: 20px; display: none; }
+    .upload-progress-wrap.visible { display: block; }
+    .upload-progress-bar { height: 6px; background: var(--bg-hover); border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+    .upload-progress-fill { height: 100%; background: linear-gradient(90deg, var(--amber-dark), var(--amber)); border-radius: 3px; transition: width 0.3s ease; width: 0%; }
+    .visibility-toggle { display: flex; gap: 8px; }
+    .visibility-btn { flex: 1; padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-input); color: var(--text-muted); font-size: .875rem; font-weight: 500; text-align: center; cursor: pointer; transition: all var(--transition); }
+    .visibility-btn.active { border-color: var(--amber); background: var(--amber-glow); color: var(--amber); }
+    .req { color: var(--amber); }
+  </style>
+</head>
+<body>
+  <div class="main-content">
+    <div class="container">
+      <div class="upload-page">
+        <div class="upload-card">
+          <h1 style="font-family:var(--font-display);font-size:1.8rem;margin-bottom:8px" data-i18n="upload_title"></h1>
+          <p style="color:var(--text-muted);font-size:.9rem;margin-bottom:36px" id="upload-subtitle"></p>
+
+          <form id="upload-form">
+            <!-- Title -->
+            <div class="form-group">
+              <label class="form-label"><span data-i18n="book_title"></span> <span class="req">*</span></label>
+              <input type="text" id="book-title" class="form-control" required maxlength="150"
+                     oninput="updateCounter('book-title', 150)">
+              <div style="font-size:0.75rem;color:var(--text-muted);text-align:right;margin-top:4px">
+                <span id="book-title-count">0</span>/150
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="form-group">
+              <label class="form-label"><span data-i18n="book_description"></span> <span class="req">*</span></label>
+              <textarea id="book-desc" class="form-control" rows="5" required style="min-height:120px;white-space:pre-wrap;word-break:break-word"
+                        maxlength="2000" oninput="updateCounter('book-desc', 2000)"></textarea>
+              <div style="font-size:0.75rem;color:var(--text-muted);text-align:right;margin-top:4px">
+                <span id="book-desc-count">0</span>/2000
+              </div>
+            </div>
+
+            <!-- Language -->
+            <div class="form-group">
+              <label class="form-label"><span data-i18n="language"></span> <span class="req">*</span></label>
+              <select id="book-language" class="form-control" required>
+                <option value="">—</option>
+              </select>
+            </div>
+
+            <!-- Genres -->
+            <div class="form-group">
+              <label class="form-label"><span data-i18n="genre"></span> <span class="req">*</span></label>
+              <div class="genre-grid" id="genre-chips"></div>
+              <div style="font-size:.78rem;color:var(--text-muted);margin-top:8px" id="genre-hint"></div>
+              <input type="hidden" id="selected-genres" value="">
+            </div>
+
+            <!-- Visibility -->
+            <div class="form-group">
+              <label class="form-label" id="vis-label"></label>
+              <div class="visibility-toggle">
+                <button type="button" class="visibility-btn active" data-vis="1">🌐 <span data-i18n="visibility_public"></span></button>
+                <button type="button" class="visibility-btn" data-vis="0">🔒 <span data-i18n="visibility_private"></span></button>
+              </div>
+              <input type="hidden" id="book-visibility" value="1">
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Cover -->
+            <div class="form-group">
+              <label class="form-label">
+                <span data-i18n="book_cover"></span>
+                <span style="color:var(--text-muted);font-size:.8rem;margin-left:6px">(JPG/PNG ≤5MB)</span>
+              </label>
+              <div class="dropzone" id="cover-dropzone">
+                <input type="file" id="cover-file" accept="image/jpeg,image/png,image/webp">
+                <div style="font-size:2.5rem;margin-bottom:12px">🖼️</div>
+                <div style="font-size:.95rem;font-weight:500;margin-bottom:4px" id="cover-drop-text"></div>
+                <div style="font-size:.8rem;color:var(--text-muted)">JPG, PNG, WebP</div>
+              </div>
+              <div class="cover-preview" id="cover-preview">
+                <img id="cover-preview-img" src="" alt="">
+                <div>
+                  <div id="cover-preview-name" style="font-size:.875rem;font-weight:500;margin-bottom:4px"></div>
+                  <button type="button" class="btn btn-danger btn-sm" id="cover-remove-btn" onclick="removeCover()"></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Audio -->
+            <div class="form-group">
+              <label class="form-label">
+                <span data-i18n="audio_files"></span> <span class="req">*</span>
+                <span style="color:var(--text-muted);font-size:.8rem;margin-left:6px">(MP3/WAV/OGG ≤500MB)</span>
+              </label>
+              <div class="dropzone" id="audio-dropzone">
+                <input type="file" id="audio-files-input" accept=".mp3,.wav,.ogg,.m4a,.aac,.flac" multiple>
+                <div style="font-size:2.5rem;margin-bottom:12px">🎵</div>
+                <div style="font-size:.95rem;font-weight:500;margin-bottom:4px" id="audio-drop-text"></div>
+                <div style="font-size:.8rem;color:var(--text-muted)" id="audio-drop-hint">MP3, WAV, OGG, M4A, AAC, FLAC</div>
+              </div>
+              <div id="audio-files-list" style="margin-top:12px"></div>
+            </div>
+
+            <!-- Progress -->
+            <div class="upload-progress-wrap" id="upload-progress">
+              <div style="font-size:.875rem;margin-bottom:8px;color:var(--amber)" id="uploading-text"></div>
+              <div class="upload-progress-bar"><div class="upload-progress-fill" id="upload-progress-fill"></div></div>
+              <div id="upload-progress-pct" style="font-size:.8rem;color:var(--text-muted)">0%</div>
+            </div>
+
+            <div id="form-error" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#EF4444;padding:10px 14px;border-radius:8px;font-size:.875rem;margin-top:16px"></div>
+
+            <div style="margin-top:28px;display:flex;gap:12px">
+              <button type="submit" class="btn btn-primary btn-lg" id="submit-btn">
+                🚀 <span data-i18n="publish_btn"></span>
+              </button>
+              <a href="index.html" class="btn btn-secondary btn-lg" data-i18n="cancel"></a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/i18n.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/player.js"></script>
+  <script src="../js/nav.js"></script>
+  <script>
+    if (!api.isLoggedIn()) window.location.href = 'login.html?redirect=upload.html';
+
+    let selectedAudioFiles = [];
+    let coverFile = null;
+    let selectedGenreIds = new Set();
+    let allGenres = [], allLanguages = [];
+
+    const GENRE_ICONS = {
+      fiction:'📖','non-fiction':'🔍',science:'🔬',fantasy:'🐉',
+      mystery:'🕵️',romance:'💖',thriller:'😱',biography:'👤',
+      history:'🏛️',children:'🧸',education:'🎓',psychology:'🧠',
+      business:'💼',poetry:'✍️',other:'📚'
+    };
+
+    const TX = {
+      lv: { subtitle:'Aizpildi formu, lai publicētu savu audiogrāmatu.', coverDrop:'Klikšķini vai velc attēlu šurp', audioDrop:'Klikšķini vai velc audiofailus šurp', genreHint:'Izvēlies vismaz vienu žanru', coverRemove:'✕ Noņemt', uploading:'⬆️ Augšupielādē...', partTitle:'Daļas nosaukums', visLabel:'Publiskums' },
+      ru: { subtitle:'Заполни форму, чтобы опубликовать аудиокнигу.', coverDrop:'Нажми или перетащи изображение сюда', audioDrop:'Нажми или перетащи аудиофайлы сюда', genreHint:'Выбери хотя бы один жанр', coverRemove:'✕ Убрать', uploading:'⬆️ Загружается...', partTitle:'Название части', visLabel:'Видимость' },
+      en: { subtitle:'Fill in the form to publish your audiobook.', coverDrop:'Click or drag image here', audioDrop:'Click or drag audio files here', genreHint:'Select at least one genre', coverRemove:'✕ Remove', uploading:'⬆️ Uploading...', partTitle:'Part title', visLabel:'Visibility' },
+    };
+
+    function tx() { return TX[i18n.current] || TX.lv; }
+
+    function applyDynamic() {
+      const t = tx();
+      document.getElementById('upload-subtitle').textContent  = t.subtitle;
+      document.getElementById('cover-drop-text').textContent  = t.coverDrop;
+      document.getElementById('audio-drop-text').textContent  = t.audioDrop;
+      document.getElementById('genre-hint').textContent       = t.genreHint;
+      document.getElementById('cover-remove-btn').textContent = t.coverRemove;
+      document.getElementById('uploading-text').textContent   = t.uploading;
+      document.getElementById('vis-label').textContent        = t.visLabel;
+      document.querySelectorAll('.part-title-input').forEach((inp, i) => {
+        inp.placeholder = t.partTitle + ' ' + (i + 1);
+      });
+    }
+
+    // Hook language change
+    const _origSet = i18n.set.bind(i18n);
+    i18n.set = function(lang) {
+      _origSet(lang);
+      applyDynamic();
+      renderGenreChips();
+      fillLangSelect();
+    };
+
+    async function loadMeta() {
+      try { const r = await api.books.genres();    allGenres    = r.genres;    renderGenreChips(); } catch {}
+      try { const r = await api.books.languages(); allLanguages = r.languages; fillLangSelect(); } catch {}
+      applyDynamic();
+    }
+
+    function renderGenreChips() {
+      const lang = i18n.current;
+      document.getElementById('genre-chips').innerHTML = allGenres.map(g => `
+        <div class="genre-chip ${selectedGenreIds.has(g.id) ? 'selected' : ''}"
+             data-id="${g.id}" onclick="toggleGenre(${g.id}, this)">
+          <span>${GENRE_ICONS[g.slug] || '📚'}</span>
+          <span>${g['name_' + lang] || g.name_en}</span>
+        </div>`).join('');
+    }
+
+    function toggleGenre(id, el) {
+      selectedGenreIds.has(id) ? selectedGenreIds.delete(id) : selectedGenreIds.add(id);
+      el.classList.toggle('selected', selectedGenreIds.has(id));
+      document.getElementById('selected-genres').value = [...selectedGenreIds].join(',');
+    }
+
+    function fillLangSelect() {
+      const lang = i18n.current;
+      const sel = document.getElementById('book-language');
+      const cur = sel.value;
+      while (sel.options.length > 1) sel.remove(1);
+      allLanguages.forEach(l => {
+        const o = document.createElement('option');
+        o.value = l.id; o.textContent = l['name_' + lang] || l.name_en;
+        sel.appendChild(o);
+      });
+      if (cur) sel.value = cur;
+    }
+
+    // Cover
+    document.getElementById('cover-file').addEventListener('change', (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      coverFile = file;
+      const r = new FileReader();
+      r.onload = (ev) => {
+        document.getElementById('cover-preview-img').src = ev.target.result;
+        document.getElementById('cover-preview-name').textContent = file.name;
+        document.getElementById('cover-preview').classList.add('visible');
+        document.getElementById('cover-dropzone').style.display = 'none';
+      };
+      r.readAsDataURL(file);
+    });
+
+    function removeCover() {
+      coverFile = null;
+      document.getElementById('cover-file').value = '';
+      document.getElementById('cover-preview').classList.remove('visible');
+      document.getElementById('cover-dropzone').style.display = 'block';
+    }
+
+    function updateCounter(id, max) {
+      const el  = document.getElementById(id);
+      const cnt = document.getElementById(id + '-count');
+      if (!cnt) return;
+      const len = el.value.length;
+      cnt.textContent = len;
+      cnt.style.color = len >= max * 0.9 ? '#EF4444' : 'var(--text-muted)';
+    }
+
+    // ── Определяем длительность через браузерный Audio API ──
+    const fileDurations = {}; // filename -> duration_sec
+
+    function getFileDuration(file) {
+      return new Promise((resolve) => {
+        const url   = URL.createObjectURL(file);
+        const audio = new Audio();
+        audio.preload = 'metadata';
+        audio.onloadedmetadata = () => {
+          URL.revokeObjectURL(url);
+          resolve(Math.floor(audio.duration) || 0);
+        };
+        audio.onerror = () => { URL.revokeObjectURL(url); resolve(0); };
+        audio.src = url;
+      });
+    }
+
+    // Audio
+    document.getElementById('audio-files-input').addEventListener('change', async (e) => {
+      const newFiles = Array.from(e.target.files);
+      for (const f of newFiles) {
+        const dur = await getFileDuration(f);
+        fileDurations[f.name + f.size] = dur;
+      }
+      selectedAudioFiles = [...selectedAudioFiles, ...newFiles];
+      renderAudioList();
+    });
+
+    const aDz = document.getElementById('audio-dropzone');
+    aDz.addEventListener('dragover', e => { e.preventDefault(); aDz.classList.add('drag-over'); });
+    aDz.addEventListener('dragleave', () => aDz.classList.remove('drag-over'));
+    aDz.addEventListener('drop', async e => {
+      e.preventDefault(); aDz.classList.remove('drag-over');
+      const files = Array.from(e.dataTransfer.files).filter(f => /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(f.name));
+      for (const f of files) {
+        const dur = await getFileDuration(f);
+        fileDurations[f.name + f.size] = dur;
+      }
+      selectedAudioFiles = [...selectedAudioFiles, ...files];
+      renderAudioList();
+    });
+
+    function renderAudioList() {
+      const pt = tx().partTitle;
+      document.getElementById('audio-files-list').innerHTML = selectedAudioFiles.map((f, i) => `
+        <div class="audio-file-item">
+          <div style="font-size:1.3rem">🎵</div>
+          <div style="flex:1">
+            <div style="font-size:.9rem;font-weight:500">${f.name}</div>
+            <div style="font-size:.75rem;color:var(--text-muted)">${(f.size/1024/1024).toFixed(1)} MB</div>
+            <div class="audio-file-title">
+              <input type="text" class="part-title-input" placeholder="${pt} ${i+1}"
+                     id="part-title-${i}" value="${f.name.replace(/\.[^.]+$/, '').substring(0, 100)}"
+                     maxlength="100">
+            </div>
+          </div>
+          <button type="button" class="audio-file-remove" onclick="removeAudio(${i})">✕</button>
+        </div>`).join('');
+    }
+
+    function removeAudio(idx) { selectedAudioFiles.splice(idx, 1); renderAudioList(); }
+
+    document.querySelectorAll('.visibility-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.visibility-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('book-visibility').value = btn.dataset.vis;
+      });
+    });
+
+    function showErr(msg) {
+      const el = document.getElementById('form-error');
+      el.textContent = msg; el.style.display = 'block';
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    document.getElementById('upload-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      document.getElementById('form-error').style.display = 'none';
+
+      const title  = document.getElementById('book-title').value.trim();
+      const desc   = document.getElementById('book-desc').value.trim();
+      const langId = document.getElementById('book-language').value;
+      const genres = document.getElementById('selected-genres').value;
+
+      if (!title)                    return showErr(t('book_title') + ' — ' + t('error_required'));
+      if (!desc)                     return showErr(t('book_description') + ' — ' + t('error_required'));
+      if (!langId)                   return showErr(t('language') + ' — ' + t('error_required'));
+      if (!genres)                   return showErr(tx().genreHint);
+      if (!selectedAudioFiles.length)return showErr(t('audio_files') + ' — ' + t('error_required'));
+
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+
+      const partsMeta = selectedAudioFiles.map((f, i) => ({
+        part_title:   document.getElementById(`part-title-${i}`)?.value || `Part ${i+1}`,
+        duration_sec: fileDurations[f.name + f.size] || 0,
+      }));
+
+      const fd = new FormData();
+      fd.append('title',       title);
+      fd.append('description', desc);
+      fd.append('genre_ids',   genres);
+      fd.append('language_id', langId);
+      fd.append('is_public',   document.getElementById('book-visibility').value);
+      fd.append('parts_meta',  JSON.stringify(partsMeta));
+      if (coverFile) fd.append('cover', coverFile);
+      selectedAudioFiles.forEach(f => fd.append('audio_files', f));
+
+      const pw = document.getElementById('upload-progress');
+      const pf = document.getElementById('upload-progress-fill');
+      const pp = document.getElementById('upload-progress-pct');
+      pw.classList.add('visible');
+
+      let fake = 0;
+      const iv = setInterval(() => {
+        fake = Math.min(fake + Math.random() * 8, 90);
+        pf.style.width = fake + '%';
+        pp.textContent = Math.round(fake) + '%';
+      }, 200);
+
+      try {
+        const { book } = await api.books.create(fd);
+        clearInterval(iv);
+        pf.style.width = '100%'; pp.textContent = '100%';
+        showToast(t('success_upload'), 'success');
+        setTimeout(() => { window.location.href = `book.html?id=${book.id}`; }, 1000);
+      } catch (err) {
+        clearInterval(iv);
+        pw.classList.remove('visible');
+        showErr(err.message);
+        btn.disabled = false;
+      }
+    });
+
+    loadMeta();
+  </script>
+</body>
+</html>

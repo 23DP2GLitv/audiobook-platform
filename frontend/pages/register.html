@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reģistrēties — AudioBooks</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/player.css">
+  <style>
+    .auth-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 20px 40px;
+      background:
+        radial-gradient(ellipse 60% 60% at 70% 40%, rgba(245,158,11,0.07) 0%, transparent 60%),
+        var(--bg-base);
+    }
+    .auth-container { width: 100%; max-width: 440px; }
+    .auth-logo { text-align: center; margin-bottom: 32px; }
+    .auth-logo a { font-family: var(--font-display); font-size: 1.8rem; color: var(--amber); }
+    .auth-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 36px;
+    }
+    .auth-title { font-family: var(--font-display); font-size: 1.6rem; margin-bottom: 28px; }
+    .auth-footer { text-align: center; margin-top: 20px; font-size: 0.875rem; color: var(--text-muted); }
+    .auth-footer a { color: var(--amber); }
+    #error-msg {
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      color: #EF4444;
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 0.875rem;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .password-strength {
+      height: 4px;
+      background: var(--bg-hover);
+      border-radius: 2px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+    .password-strength-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s, background 0.3s;
+      width: 0%;
+    }
+    .pwd-toggle {
+      position: absolute; right: 12px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none;
+      color: var(--text-muted); font-size: 1rem; cursor: pointer; padding: 4px;
+      transition: color 0.2s;
+    }
+    .pwd-toggle:hover { color: var(--amber); }
+  </style>
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-container">
+      <div class="auth-logo">
+        <a href="index.html">📚 AudioBooks</a>
+      </div>
+      <div class="auth-card">
+        <h1 class="auth-title" data-i18n="register_title">Reģistrēties</h1>
+        <div id="error-msg"></div>
+        <form id="register-form">
+          <div class="form-group">
+            <label class="form-label" data-i18n="email">E-pasts</label>
+            <input type="email" id="email" class="form-control" placeholder="jūsu@epasts.lv" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="username">Lietotājvārds</label>
+            <input type="text" id="username" class="form-control" placeholder="lietotajvards123" required
+                   pattern="[a-zA-Z0-9_]{3,30}">
+            <div class="form-hint">3–30 simboli, burti/cipari/pasvītra</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="password">Parole</label>
+            <div style="position:relative;display:flex;gap:8px">
+              <div style="position:relative;flex:1">
+                <input type="password" id="password" class="form-control" required minlength="8" style="padding-right:44px">
+                <button type="button" class="pwd-toggle" onclick="togglePwd('password',this)">👁</button>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="generatePassword()" style="white-space:nowrap;flex-shrink:0">🔀</button>
+            </div>
+            <div class="password-strength" style="margin-top:6px">
+              <div class="password-strength-fill" id="strength-fill"></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="confirm_password">Atkārtot Paroli</label>
+            <div style="position:relative">
+              <input type="password" id="confirm" class="form-control" required style="padding-right:44px">
+              <button type="button" class="pwd-toggle" onclick="togglePwd('confirm',this)">👁</button>
+            </div>
+            <div class="form-error" id="confirm-error" style="display:none" data-i18n="error_password_match"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="interface_language">Valoda</label>
+            <select id="ui_language" class="form-control">
+              <option value="lv">Latviešu</option>
+              <option value="ru">Русский</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary w-full btn-lg" id="register-btn">
+            <span data-i18n="register_btn">Reģistrēties</span>
+          </button>
+        </form>
+        <div class="auth-footer">
+          <span data-i18n="have_account">Jau ir konts?</span>
+          <a href="login.html" data-i18n="nav_login"> Pieteikties</a>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <div class="lang-switcher" style="justify-content:center">
+          <button class="lang-btn" data-lang="lv">LV</button>
+          <button class="lang-btn" data-lang="ru">RU</button>
+          <button class="lang-btn" data-lang="en">EN</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/i18n.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/player.js"></script>
+  <script>
+    i18n.init();
+    if (api.isLoggedIn()) window.location.href = 'index.html';
+
+    // Set language select to current
+    document.getElementById('ui_language').value = i18n.current;
+
+    // Language switcher
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.lang-btn');
+      if (btn) {
+        i18n.set(btn.dataset.lang);
+        document.getElementById('ui_language').value = btn.dataset.lang;
+        document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b === btn));
+      }
+    });
+
+    // Password strength
+    document.getElementById('password').addEventListener('input', (e) => {
+      const val = e.target.value;
+      const fill = document.getElementById('strength-fill');
+      let score = 0;
+      if (val.length >= 8) score++;
+      if (/[A-Z]/.test(val)) score++;
+      if (/[0-9]/.test(val)) score++;
+      if (/[^a-zA-Z0-9]/.test(val)) score++;
+      const colors = ['#EF4444','#F59E0B','#22C55E','#16A34A'];
+      fill.style.width  = (score / 4 * 100) + '%';
+      fill.style.background = colors[score - 1] || 'transparent';
+    });
+
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errEl   = document.getElementById('error-msg');
+      const confErr = document.getElementById('confirm-error');
+      errEl.style.display = 'none';
+      confErr.style.display = 'none';
+
+      const lang     = i18n.current;
+      const email    = document.getElementById('email').value.trim();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const confirm  = document.getElementById('confirm').value;
+
+      function showErr(msg) { errEl.textContent = msg; errEl.style.display = 'block'; }
+
+      if (!email)    { showErr(lang==='ru'?'Введите email':lang==='en'?'Enter email':'Ievadiet e-pastu'); return; }
+      if (!username) { showErr(lang==='ru'?'Введите имя пользователя':lang==='en'?'Enter username':'Ievadiet lietotājvārdu'); return; }
+      if (!password) { showErr(lang==='ru'?'Введите пароль':lang==='en'?'Enter password':'Ievadiet paroli'); return; }
+      if (password.length < 8) { showErr(t('error_password_short')); return; }
+      if (!confirm)  { showErr(lang==='ru'?'Повторите пароль':lang==='en'?'Confirm your password':'Atkārtojiet paroli'); return; }
+      if (password !== confirm) { confErr.style.display = 'block'; return; }
+
+      const btn = document.getElementById('register-btn');
+      btn.disabled = true;
+
+      try {
+        const { token, user } = await api.auth.register({
+          email, username, password,
+          ui_language: document.getElementById('ui_language').value,
+        });
+        api.setAuth(token, user);
+        showToast(lang==='ru'?'Аккаунт создан!':lang==='en'?'Account created!':'Konts izveidots!', 'success');
+        setTimeout(() => { window.location.href = 'index.html'; }, 800);
+      } catch (err) {
+        errEl.textContent = err.message || (lang==='ru'?'Ошибка регистрации':lang==='en'?'Registration failed':'Reģistrācija neizdevās');
+        errEl.style.display = 'block';
+        btn.disabled = false;
+      }
+    });
+
+    function togglePwd(inputId, btn) {
+      const input = document.getElementById(inputId);
+      const isHidden = input.type === 'password';
+      input.type = isHidden ? 'text' : 'password';
+      btn.textContent = isHidden ? '✕' : '👁';
+    }
+
+    function generatePassword() {
+      const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const lower = 'abcdefghijklmnopqrstuvwxyz';
+      const digits = '0123456789';
+      const special = '!@#$%^&*-_=+';
+      const all = upper + lower + digits + special;
+      let pwd = [
+        upper[Math.floor(Math.random()*upper.length)],
+        lower[Math.floor(Math.random()*lower.length)],
+        digits[Math.floor(Math.random()*digits.length)],
+        special[Math.floor(Math.random()*special.length)],
+      ];
+      for (let i = 4; i < 14; i++) pwd.push(all[Math.floor(Math.random()*all.length)]);
+      pwd = pwd.sort(() => Math.random() - 0.5).join('');
+
+      const p = document.getElementById('password');
+      const c = document.getElementById('confirm');
+      p.value = pwd; c.value = pwd;
+      p.type = 'text'; c.type = 'text';
+      p.dispatchEvent(new Event('input'));
+      setTimeout(() => { p.type = 'password'; c.type = 'password'; }, 3000);
+
+      const lang = i18n.current;
+      const msg = lang === 'ru' ? 'Пароль сгенерирован и вставлен в поля'
+                : lang === 'en' ? 'Password generated and filled in'
+                : 'Parole ģenerēta un ievadīta laukos';
+      showToast(msg, 'success');
+    }
+
+    function showToast(msg, type) {
+      const d = document.createElement('div');
+      d.style.cssText = `position:fixed;bottom:20px;right:20px;background:var(--bg-elevated);border:1px solid var(--border);padding:14px 18px;border-radius:12px;color:var(--text-primary);z-index:9999;font-size:0.9rem;max-width:320px;word-break:break-all`;
+      d.textContent = (type === 'success' ? '✓ ' : '') + msg;
+      document.body.appendChild(d);
+      setTimeout(() => d.remove(), 5000);
+    }
+  </script>
+</body>
+</html>

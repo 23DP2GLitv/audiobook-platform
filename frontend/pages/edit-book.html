@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rediģēt grāmatu — AudioBooks</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/player.css">
+  <style>
+    .edit-page { max-width: 760px; margin: 0 auto; padding: 48px 0 80px; }
+    .edit-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 40px;
+    }
+    .visibility-toggle { display: flex; gap: 8px; }
+    .visibility-btn {
+      flex: 1; padding: 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-input);
+      color: var(--text-muted);
+      font-size: 0.875rem; font-weight: 500;
+      text-align: center; cursor: pointer;
+      transition: all var(--transition);
+    }
+    .visibility-btn.active {
+      border-color: var(--amber);
+      background: var(--amber-glow);
+      color: var(--amber);
+    }
+    .genre-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+    .genre-chip {
+      padding: 8px 12px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border); background: var(--bg-input);
+      color: var(--text-secondary); font-size: 0.82rem; cursor: pointer;
+      transition: all 0.2s; display: flex; align-items: center; gap: 6px; user-select: none;
+    }
+    .genre-chip:hover { border-color: var(--amber); color: var(--text-primary); }
+    .genre-chip.selected { border-color: var(--amber); background: var(--amber-glow); color: var(--amber); }
+  </style>
+</head>
+<body>
+  <div class="main-content">
+    <div class="container">
+      <div class="edit-page">
+        <div class="edit-card">
+          <h1 style="font-family:var(--font-display);font-size:1.8rem;margin-bottom:8px">✏️ Rediģēt grāmatu</h1>
+          <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:36px">Mainīt metadatus un iestatījumus</p>
+
+          <div id="loading" class="loading-block"><div class="spinner"></div></div>
+
+          <form id="edit-form" style="display:none">
+            <div class="form-group">
+              <label class="form-label" data-i18n="book_title">Nosaukums *</label>
+              <input type="text" id="book-title" class="form-control" required maxlength="150"
+                     oninput="updateCounter('book-title', 150)">
+              <div style="font-size:0.75rem;color:var(--text-muted);text-align:right;margin-top:4px">
+                <span id="book-title-count">0</span>/150
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="book_description">Apraksts</label>
+              <textarea id="book-desc" class="form-control" rows="5" maxlength="2000"
+                        style="white-space:pre-wrap;word-break:break-word"
+                        oninput="updateCounter('book-desc', 2000)"></textarea>
+              <div style="font-size:0.75rem;color:var(--text-muted);text-align:right;margin-top:4px">
+                <span id="book-desc-count">0</span>/2000
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label"><span data-i18n="genre">Žanrs</span> <span style="color:var(--amber)">*</span></label>
+              <div class="genre-grid" id="genre-chips"></div>
+              <div style="font-size:0.78rem;color:var(--text-muted);margin-top:8px" id="genre-hint"></div>
+              <input type="hidden" id="selected-genres" value="">
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="language">Valoda</label>
+              <select id="book-language" class="form-control">
+                <option value="">— Izvēlēties —</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Publiskums</label>
+              <div class="visibility-toggle">
+                <button type="button" class="visibility-btn active" data-vis="1" id="vis-public">
+                  🌐 <span data-i18n="visibility_public">Publiski</span>
+                </button>
+                <button type="button" class="visibility-btn" data-vis="0" id="vis-private">
+                  🔒 <span data-i18n="visibility_private">Privāti</span>
+                </button>
+              </div>
+              <input type="hidden" id="book-visibility" value="1">
+            </div>
+            <div style="display:flex;gap:12px;margin-top:28px">
+              <button type="submit" class="btn btn-primary btn-lg" id="save-btn">💾 Saglabāt</button>
+              <button type="button" class="btn btn-secondary btn-lg" onclick="history.back()" data-i18n="cancel">Atcelt</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/i18n.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/player.js"></script>
+  <script src="../js/nav.js"></script>
+  <script>
+    if (!api.isLoggedIn()) window.location.href = 'login.html';
+    const bookId = new URLSearchParams(window.location.search).get('id');
+    if (!bookId) window.location.href = 'my-books.html';
+
+    const GENRE_ICONS = {
+      fiction:'📖','non-fiction':'🔍',science:'🔬',fantasy:'🐉',
+      mystery:'🕵️',romance:'💖',thriller:'😱',biography:'👤',
+      history:'🏛️',children:'🧸',education:'🎓',psychology:'🧠',
+      business:'💼',poetry:'✍️',other:'📚'
+    };
+
+    let allGenres = [];
+    let selectedGenreIds = new Set();
+
+    function updateCounter(id, max) {
+      const el  = document.getElementById(id);
+      const cnt = document.getElementById(id + '-count');
+      if (!cnt) return;
+      const len = el.value.length;
+      cnt.textContent = len;
+      cnt.style.color = len >= max * 0.9 ? '#EF4444' : 'var(--text-muted)';
+    }
+
+    function renderGenreChips() {
+      const lang = i18n.current;
+      const hint = lang === 'ru' ? 'Выбери хотя бы один жанр' : lang === 'en' ? 'Select at least one genre' : 'Izvēlies vismaz vienu žanru';
+      document.getElementById('genre-hint').textContent = hint;
+      document.getElementById('genre-chips').innerHTML = allGenres.map(g => `
+        <div class="genre-chip ${selectedGenreIds.has(g.id) ? 'selected' : ''}"
+             data-id="${g.id}" onclick="toggleGenre(${g.id}, this)">
+          <span>${GENRE_ICONS[g.slug] || '📚'}</span>
+          <span>${g['name_' + lang] || g.name_en}</span>
+        </div>`).join('');
+    }
+
+    function toggleGenre(id, el) {
+      if (selectedGenreIds.has(id) && selectedGenreIds.size <= 1) {
+        showToast(document.getElementById('genre-hint').textContent, 'info');
+        return; // минимум 1 жанр
+      }
+      selectedGenreIds.has(id) ? selectedGenreIds.delete(id) : selectedGenreIds.add(id);
+      el.classList.toggle('selected', selectedGenreIds.has(id));
+      document.getElementById('selected-genres').value = [...selectedGenreIds].join(',');
+    }
+
+    async function loadMeta() {
+      const lang = i18n.current;
+      try {
+        const { genres } = await api.books.genres();
+        allGenres = genres;
+        renderGenreChips();
+      } catch {}
+      try {
+        const { languages } = await api.books.languages();
+        const sel = document.getElementById('book-language');
+        const cur = sel.value;
+        while (sel.options.length > 1) sel.remove(1);
+        languages.forEach(l => {
+          const o = document.createElement('option');
+          o.value = l.id; o.textContent = l['name_' + lang] || l.name_en;
+          sel.appendChild(o);
+        });
+        if (cur) sel.value = cur;
+      } catch {}
+    }
+
+    async function loadBook() {
+      try {
+        const { book } = await api.books.get(bookId);
+        const user = api.getUser();
+        if (book.author_id !== user.id && !api.isMod()) {
+          window.location.href = 'my-books.html'; return;
+        }
+
+        document.getElementById('book-title').value = book.title || '';
+        document.getElementById('book-desc').value  = book.description || '';
+        updateCounter('book-title', 150);
+        updateCounter('book-desc', 2000);
+        document.getElementById('book-visibility').value = book.is_public ? '1' : '0';
+
+        await loadMeta();
+
+        // Восстанавливаем выбранные жанры
+        if (book.genre_id) selectedGenreIds.add(parseInt(book.genre_id));
+        if (book.genres?.length) book.genres.forEach(g => selectedGenreIds.add(parseInt(g.id)));
+        document.getElementById('selected-genres').value = [...selectedGenreIds].join(',');
+        renderGenreChips();
+
+        if (book.language_id) document.getElementById('book-language').value = book.language_id;
+
+        document.querySelectorAll('.visibility-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.vis === String(book.is_public ? 1 : 0));
+        });
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('edit-form').style.display = 'block';
+        document.title = `Rediģēt: ${book.title} — AudioBooks`;
+      } catch(e) {
+        document.getElementById('loading').innerHTML =
+          `<div class="empty-state"><div class="empty-state-icon">😕</div><h3>${e.message}</h3></div>`;
+      }
+    }
+
+    document.querySelectorAll('.visibility-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.visibility-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('book-visibility').value = btn.dataset.vis;
+      });
+    });
+
+    document.getElementById('edit-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const genres = document.getElementById('selected-genres').value;
+      if (!genres) {
+        showToast(document.getElementById('genre-hint').textContent, 'error'); return;
+      }
+      const btn = document.getElementById('save-btn');
+      btn.disabled = true; btn.textContent = '...';
+      try {
+        await api.books.update(bookId, {
+          title:       document.getElementById('book-title').value.trim(),
+          description: document.getElementById('book-desc').value.trim(),
+          genre_ids:   genres,
+          language_id: document.getElementById('book-language').value || null,
+          is_public:   parseInt(document.getElementById('book-visibility').value),
+        });
+        showToast('Saglabāts!', 'success');
+        setTimeout(() => { window.location.href = `book.html?id=${bookId}`; }, 800);
+      } catch(err) {
+        showToast(err.message, 'error');
+        btn.disabled = false; btn.textContent = '💾 Saglabāt';
+      }
+    });
+
+    // Обновляем при смене языка
+    const _orig = i18n.set.bind(i18n);
+    i18n.set = function(lang) { _orig(lang); loadMeta(); };
+
+    loadBook();
+  </script>
+</body>
+</html>

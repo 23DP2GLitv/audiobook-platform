@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profils — AudioBooks</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/player.css">
+  <style>
+    .profile-page { max-width: 820px; margin: 0 auto; padding: 48px 0 80px; }
+    .pwd-toggle {
+      position: absolute;
+      right: 12px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none;
+      color: var(--text-muted);
+      font-size: 1rem; cursor: pointer;
+      padding: 4px;
+      transition: color 0.2s;
+    }
+    .pwd-toggle:hover { color: var(--amber); }
+    .profile-header {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 36px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 600px) { .profile-header { flex-direction: column; text-align: center; } }
+    .profile-avatar-wrap { position: relative; flex-shrink: 0; cursor: pointer; }
+    .profile-avatar-img {
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--border-amber);
+    }
+    .profile-avatar-placeholder {
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--amber-dark), var(--amber));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem; font-weight: 700; color: #000;
+      border: 3px solid var(--border-amber);
+    }
+    .avatar-upload-overlay {
+      position: absolute; inset: 0;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.6);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity var(--transition);
+      font-size: 1.3rem; color: white;
+    }
+    .profile-avatar-wrap:hover .avatar-upload-overlay { opacity: 1; }
+    .profile-username { font-size: 1.6rem; margin-bottom: 4px; }
+    .profile-email { color: var(--text-muted); font-size: 0.875rem; margin-bottom: 12px; }
+    .profile-role { }
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 480px) { .stat-row { grid-template-columns: 1fr 1fr; } }
+
+    .section-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 32px;
+      margin-bottom: 20px;
+    }
+    .section-card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="main-content">
+    <div class="container">
+      <div class="profile-page">
+        <!-- Header -->
+        <div class="profile-header" id="profile-header">
+          <div class="spinner"></div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stat-row" id="stat-row" style="display:none">
+          <div class="stat-card">
+            <div class="stat-card-icon">🎧</div>
+            <div class="stat-card-label" data-i18n="books_listened">Noklausītas grāmatas</div>
+            <div class="stat-card-value" id="stat-listened">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon">⏱️</div>
+            <div class="stat-card-label" data-i18n="hours_listened">Stundas</div>
+            <div class="stat-card-value" id="stat-hours">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-icon">📖</div>
+            <div class="stat-card-label" data-i18n="books_published_stat">Publicētas grāmatas</div>
+            <div class="stat-card-value" id="stat-published">0</div>
+          </div>
+        </div>
+
+        <!-- Edit Profile -->
+        <div class="section-card">
+          <div class="section-card-title">✏️ <span data-i18n="edit_profile">Rediģēt Profilu</span></div>
+          <form id="profile-form">
+            <div class="form-group">
+              <label class="form-label" data-i18n="bio_placeholder">Par sevi</label>
+              <textarea id="bio-input" class="form-control" rows="4" data-i18n-attr="placeholder" data-i18n="bio_placeholder"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="interface_language">Valoda</label>
+              <select id="lang-input" class="form-control">
+                <option value="lv">Latviešu</option>
+                <option value="ru">Русский</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary" data-i18n="save_changes">Saglabāt</button>
+          </form>
+        </div>
+
+        <!-- Change Password -->
+        <div class="section-card">
+          <div class="section-card-title">🔒 <span data-i18n="change_password"></span></div>
+          <form id="password-form">
+            <div class="form-group">
+              <label class="form-label" data-i18n="current_password"></label>
+              <div style="position:relative">
+                <input type="password" id="current-pass" class="form-control" style="padding-right:44px">
+                <button type="button" class="pwd-toggle" onclick="togglePwd('current-pass', this)">👁</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="password"></label>
+              <div style="position:relative;display:flex;gap:8px">
+                <div style="position:relative;flex:1">
+                  <input type="password" id="new-pass" class="form-control" minlength="8" style="padding-right:44px">
+                  <button type="button" class="pwd-toggle" onclick="togglePwd('new-pass', this)">👁</button>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="generatePassword()" style="white-space:nowrap;flex-shrink:0">
+                  <span data-i18n="generate_password"></span>
+                </button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="confirm_password"></label>
+              <div style="position:relative">
+                <input type="password" id="confirm-pass" class="form-control" style="padding-right:44px">
+                <button type="button" class="pwd-toggle" onclick="togglePwd('confirm-pass', this)">👁</button>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-secondary">🔒 <span data-i18n="change_password_btn"></span></button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Avatar upload input (hidden) -->
+  <input type="file" id="avatar-input" accept="image/*" style="display:none">
+
+  <script src="../js/i18n.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/player.js"></script>
+  <script src="../js/nav.js"></script>
+  <script>
+    if (!api.isLoggedIn()) window.location.href = 'login.html';
+
+    async function loadProfile() {
+      try {
+        const { user, stats } = await api.auth.me();
+        renderHeader(user);
+
+        document.getElementById('stat-listened').textContent  = stats.books_listened || 0;
+        document.getElementById('stat-published').textContent = stats.books_published || 0;
+
+        // Реальное время из listen_time_sec
+        const totalSec = stats.listen_time_sec || 0;
+        function fmtTime(sec) {
+          const h = Math.floor(sec / 3600);
+          const m = Math.floor((sec % 3600) / 60);
+          return `${h}:${String(m).padStart(2,'0')}`;
+        }
+        document.getElementById('stat-hours').textContent = fmtTime(totalSec);
+
+        document.getElementById('stat-row').style.display = 'grid';
+        document.getElementById('bio-input').value  = user.bio || '';
+        document.getElementById('lang-input').value = user.ui_language || 'lv';
+
+        // Живое обновление пока играет плеер
+        let _base = totalSec;
+        let _start = null;
+        Player.audio.addEventListener('play',  () => { _start = Date.now(); });
+        Player.audio.addEventListener('pause', () => {
+          if (_start) { _base += (Date.now() - _start) / 1000; _start = null; }
+        });
+        setInterval(() => {
+          const extra = _start ? (Date.now() - _start) / 1000 : 0;
+          document.getElementById('stat-hours').textContent = fmtTime(_base + extra);
+        }, 5000);
+      } catch {}
+    }
+
+    function renderHeader(user) {
+      const role_labels = { user: t('role_user'), moderator: t('role_moderator'), admin: t('role_admin') };
+      const avatarHtml = user.avatar_url
+        ? `<img class="profile-avatar-img" src="http://localhost:3000${user.avatar_url}" alt="">`
+        : `<div class="profile-avatar-placeholder">${(user.username||'?')[0].toUpperCase()}</div>`;
+
+      document.getElementById('profile-header').innerHTML = `
+        <div class="profile-avatar-wrap" onclick="document.getElementById('avatar-input').click()">
+          ${avatarHtml}
+          <div class="avatar-upload-overlay">📷</div>
+        </div>
+        <div>
+          <h1 class="profile-username">${user.username}</h1>
+          <div class="profile-email">${user.email}</div>
+          <div class="profile-role">
+            <span class="badge ${user.role === 'admin' ? 'badge-red' : user.role === 'moderator' ? 'badge-blue' : 'badge-gray'}">
+              ${role_labels[user.role] || user.role}
+            </span>
+          </div>
+          ${user.bio ? `<p style="margin-top:12px;font-size:0.9rem;color:var(--text-secondary)">${user.bio}</p>` : ''}
+        </div>`;
+    }
+
+    // Avatar upload
+    document.getElementById('avatar-input').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const fd = new FormData();
+      fd.append('avatar', file);
+      try {
+        await api.users.uploadAvatar(fd);
+        const lang = i18n.current;
+        showToast(lang==='ru'?'Аватар обновлён!':lang==='en'?'Avatar updated!':'Avatārs atjaunināts!', 'success');
+        loadProfile();
+      } catch (err) { showToast(err.message, 'error'); }
+    });
+
+    // Edit profile
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const data = {
+          bio:         document.getElementById('bio-input').value.trim(),
+          ui_language: document.getElementById('lang-input').value,
+        };
+        const { user } = await api.auth.updateProfile(data);
+        const stored = api.getUser();
+        api.setAuth(api.getToken(), { ...stored, ...user });
+        i18n.set(data.ui_language);
+        const lang = i18n.current;
+        showToast(lang==='ru'?'Сохранено!':lang==='en'?'Saved!':'Saglabāts!', 'success');
+        loadProfile();
+      } catch (err) { showToast(err.message, 'error'); }
+    });
+
+    // Change password
+    document.getElementById('password-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const lang = i18n.current;
+      const currentPass = document.getElementById('current-pass').value;
+      const newPass = document.getElementById('new-pass').value;
+      const confirm = document.getElementById('confirm-pass').value;
+
+      const errRequired = lang==='ru'?'Заполните все поля':lang==='en'?'Please fill in all fields':'Aizpildiet visus laukus';
+      const errMatch    = lang==='ru'?'Пароли не совпадают':lang==='en'?'Passwords do not match':t('error_password_match');
+      const errShort    = lang==='ru'?'Пароль слишком короткий (мин. 8 символов)':lang==='en'?'Password too short (min. 8 chars)':t('error_password_short');
+
+      if (!currentPass) { showToast(errRequired, 'error'); return; }
+      if (!newPass)      { showToast(errRequired, 'error'); return; }
+      if (!confirm)      { showToast(errRequired, 'error'); return; }
+      if (newPass.length < 8) { showToast(errShort, 'error'); return; }
+      if (newPass !== confirm) { showToast(errMatch, 'error'); return; }
+
+      try {
+        await api.auth.changePassword({ current_password: currentPass, new_password: newPass });
+        showToast(lang==='ru'?'Пароль изменён!':lang==='en'?'Password changed!':'Parole mainīta!', 'success');
+        document.getElementById('password-form').reset();
+      } catch (err) {
+        showToast(lang==='ru'?'Неверный текущий пароль':lang==='en'?'Incorrect current password':'Nepareiza pašreizējā parole', 'error');
+      }
+    });
+
+    // ── Show/hide password ─────────────────────────────────
+    function togglePwd(inputId, btn) {
+      const input = document.getElementById(inputId);
+      const isHidden = input.type === 'password';
+      input.type = isHidden ? 'text' : 'password';
+      btn.textContent = isHidden ? '✕' : '👁';
+    }
+
+    // ── Generate secure password ───────────────────────────
+    function generatePassword() {
+      const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const lower = 'abcdefghijklmnopqrstuvwxyz';
+      const digits = '0123456789';
+      const special = '!@#$%^&*-_=+';
+      const all = upper + lower + digits + special;
+      let pwd = [
+        upper[Math.floor(Math.random()*upper.length)],
+        lower[Math.floor(Math.random()*lower.length)],
+        digits[Math.floor(Math.random()*digits.length)],
+        special[Math.floor(Math.random()*special.length)],
+      ];
+      for (let i = 4; i < 14; i++) pwd.push(all[Math.floor(Math.random()*all.length)]);
+      pwd = pwd.sort(() => Math.random() - 0.5).join('');
+
+      const newPass = document.getElementById('new-pass');
+      const confirmPass = document.getElementById('confirm-pass');
+      newPass.value = pwd; confirmPass.value = pwd;
+      newPass.type = 'text'; confirmPass.type = 'text';
+      setTimeout(() => { newPass.type = 'password'; confirmPass.type = 'password'; }, 3000);
+
+      const lang = i18n.current;
+      const msg = lang === 'ru' ? 'Пароль сгенерирован и скопирован в поля'
+                : lang === 'en' ? 'Password generated and filled in'
+                : 'Parole ģenerēta un ievadīta laukos';
+      showToast(msg, 'success');
+    }
+
+    loadProfile();
+  </script>
+</body>
+</html>

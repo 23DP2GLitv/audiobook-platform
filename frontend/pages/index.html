@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AudioBooks — Klausies. Veido. Dalies.</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/player.css">
+  <style>
+    .hero {
+      min-height: 88vh; display: flex; align-items: center;
+      position: relative; overflow: hidden; padding: 80px 0 60px;
+    }
+    .hero-bg {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 60% 40%, rgba(245,158,11,0.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .hero-bg-grid {
+      position: absolute; inset: 0;
+      background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 0%, transparent 80%);
+    }
+    .hero-content { position: relative; z-index: 1; max-width: 640px; }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 0.8rem; font-weight: 600; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--amber); margin-bottom: 24px;
+      padding: 6px 14px; background: var(--amber-glow2);
+      border: 1px solid var(--border-amber); border-radius: 20px;
+    }
+    .hero-title {
+      font-size: clamp(2.8rem, 7vw, 5rem); line-height: 1.05; margin-bottom: 24px;
+      background: linear-gradient(135deg, var(--text-primary) 0%, rgba(240,237,232,0.7) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hero-sub { font-size: 1.1rem; color: var(--text-secondary); line-height: 1.7; margin-bottom: 40px; max-width: 520px; }
+    .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; }
+    .hero-stats { display: flex; gap: 40px; margin-top: 56px; padding-top: 40px; border-top: 1px solid var(--border); }
+    .hero-stat-num { font-family: var(--font-display); font-size: 2rem; font-weight: 700; color: var(--text-primary); }
+    .hero-stat-label { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+    .hero-visual { position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 45%; height: 500px; display: none; }
+    @media (min-width: 1024px) { .hero-visual { display: block; } }
+    .hero-book { position: absolute; border-radius: var(--radius-md); box-shadow: 0 20px 60px rgba(0,0,0,0.5); overflow: hidden; }
+    .hero-book-1 { width: 160px; height: 240px; top: 20px; left: 40px; transform: rotate(-6deg); }
+    .hero-book-2 { width: 140px; height: 210px; top: 80px; left: 220px; transform: rotate(4deg); }
+    .hero-book-3 { width: 150px; height: 225px; top: 200px; left: 120px; transform: rotate(-2deg); }
+    .hero-book-cover { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 4rem; }
+    .genres-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+    .genre-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 20px 16px; text-align: center;
+      cursor: pointer; transition: all var(--transition); text-decoration: none;
+    }
+    .genre-card:hover { border-color: var(--border-amber); background: var(--bg-elevated); transform: translateY(-3px); }
+    .genre-icon { font-size: 2rem; margin-bottom: 8px; }
+    .genre-name { font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); }
+    .cta-banner {
+      background: linear-gradient(135deg, var(--amber-glow) 0%, transparent 60%), var(--bg-card);
+      border: 1px solid var(--border-amber); border-radius: var(--radius-xl);
+      padding: 48px; display: flex; align-items: center; justify-content: space-between; gap: 32px; flex-wrap: wrap;
+    }
+    .books-scroll { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; }
+    .books-scroll .book-card { flex-shrink: 0; width: 160px; }
+    /* Footer */
+    .footer { background: var(--bg-surface); border-top: 1px solid var(--border); padding: 48px 0; padding-bottom: calc(24px + var(--player-h)); }
+    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 48px; margin-bottom: 40px; }
+    @media (max-width: 768px) { .footer-grid { grid-template-columns: 1fr; gap: 24px; } }
+    .footer-logo { font-family: var(--font-display); font-size: 1.4rem; color: var(--amber); margin-bottom: 12px; }
+    .footer-desc { font-size: 0.875rem; color: var(--text-muted); line-height: 1.7; }
+    .footer-col-title { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 16px; }
+    .footer-link { display: block; font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 8px; transition: color var(--transition); }
+    .footer-link:hover { color: var(--amber); }
+    .footer-bottom { border-top: 1px solid var(--border); padding-top: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .footer-bottom-text { font-size: 0.8rem; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+  <div class="main-content">
+    <section class="hero">
+      <div class="hero-bg"></div>
+      <div class="hero-bg-grid"></div>
+      <div class="container">
+        <div class="hero-content">
+          <div class="hero-eyebrow">🎧 AudioBooks</div>
+          <h1 class="hero-title" data-i18n="hero_title">Klausies. Veido. Dalies.</h1>
+          <p class="hero-sub" data-i18n="hero_subtitle"></p>
+          <div class="hero-actions">
+            <a href="catalog.html" class="btn btn-primary btn-lg">🎧 <span data-i18n="hero_cta_browse"></span></a>
+            <a href="upload.html" id="hero-upload-btn" class="btn btn-secondary btn-lg">🎙️ <span data-i18n="hero_cta_upload"></span></a>
+          </div>
+          <div class="hero-stats">
+            <div>
+              <div class="hero-stat-num" id="stat-books">—</div>
+              <div class="hero-stat-label" data-i18n="total_books"></div>
+            </div>
+            <div>
+              <div class="hero-stat-num" id="stat-users">—</div>
+              <div class="hero-stat-label" data-i18n="total_users"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="hero-book hero-book-1"><div class="hero-book-cover" style="background:linear-gradient(135deg,#1a0a2e,#3b0764)">📖</div></div>
+        <div class="hero-book hero-book-2"><div class="hero-book-cover" style="background:linear-gradient(135deg,#0c1a0e,#14532d)">🌿</div></div>
+        <div class="hero-book hero-book-3"><div class="hero-book-cover" style="background:linear-gradient(135deg,#1c0a0a,#7c2d12)">🔥</div></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title" data-i18n="popular_books"></h2>
+          <a href="catalog.html?sort=listen_count" class="section-link" data-i18n="see_all"></a>
+        </div>
+        <div class="books-scroll" id="popular-books">
+          <div class="skeleton" style="width:160px;height:260px;flex-shrink:0;border-radius:12px"></div>
+          <div class="skeleton" style="width:160px;height:260px;flex-shrink:0;border-radius:12px"></div>
+          <div class="skeleton" style="width:160px;height:260px;flex-shrink:0;border-radius:12px"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top:0">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title" data-i18n="new_books"></h2>
+          <a href="catalog.html?sort=published_at" class="section-link" data-i18n="see_all"></a>
+        </div>
+        <div class="books-scroll" id="new-books">
+          <div class="skeleton" style="width:160px;height:260px;flex-shrink:0;border-radius:12px"></div>
+          <div class="skeleton" style="width:160px;height:260px;flex-shrink:0;border-radius:12px"></div>
+          <div class="skeleton" style="width:160px;height:260px;flex-shrink:0;border-radius:12px"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" style="background:var(--bg-surface);padding:48px 0">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title" data-i18n="by_genre"></h2>
+        </div>
+        <div class="genres-grid" id="genres-grid"></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="cta-banner">
+          <div>
+            <h2>🎙️ <span id="cta-title"></span></h2>
+            <p id="cta-sub"></p>
+          </div>
+          <a href="upload.html" class="btn btn-primary btn-lg" data-i18n="hero_cta_upload"></a>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid" style="grid-template-columns:2fr 1fr">
+        <div>
+          <div class="footer-logo">📚 AudioBooks</div>
+          <p class="footer-desc" data-i18n="hero_subtitle"></p>
+        </div>
+        <div>
+          <div class="footer-col-title" id="footer-about-title-idx"></div>
+          <div style="display:flex;gap:16px;margin-top:8px">
+            <a href="#" onclick="return false" class="footer-link" style="font-size:1.4rem;margin-bottom:0">𝕏</a>
+            <a href="#" onclick="return false" class="footer-link" style="font-size:1.4rem;margin-bottom:0">in</a>
+            <a href="#" onclick="return false" class="footer-link" style="font-size:1.4rem;margin-bottom:0">▶</a>
+            <a href="#" onclick="return false" class="footer-link" style="font-size:1.4rem;margin-bottom:0">f</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div class="footer-bottom-text">© 2026 AudioBooks · Rīgas Valsts Tehnikums</div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/i18n.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/player.js"></script>
+  <script src="../js/nav.js"></script>
+  <script>
+  const GENRE_ICONS = {
+    fiction:'📖','non-fiction':'🔍',science:'🔬',fantasy:'🐉',
+    mystery:'🕵️',romance:'💖',thriller:'😱',biography:'👤',
+    history:'🏛️',children:'🧸',education:'🎓',psychology:'🧠',
+    business:'💼',poetry:'✍️',other:'📚'
+  };
+
+  const CTA = {
+    lv: { title: 'Kļūsti par autoru', sub: 'Ieraksti vai augšupielādē savu audiogrāmatu un dalies ar pasauli.' },
+    ru: { title: 'Стань автором', sub: 'Запиши или загрузи свою аудиокнигу и поделись с миром.' },
+    en: { title: 'Become an author', sub: 'Record or upload your audiobook and share it with the world.' },
+  };
+
+  function updateCTA() {
+    const lang = i18n.current;
+    document.getElementById('cta-title').textContent = CTA[lang]?.title || CTA.lv.title;
+    document.getElementById('cta-sub').textContent   = CTA[lang]?.sub   || CTA.lv.sub;
+  }
+
+  function renderBookCard(book) {
+    const cover = book.cover_url
+      ? `<img class="book-cover" src="http://localhost:3000${book.cover_url}" alt="${book.title}" loading="lazy">`
+      : `<div class="book-cover-placeholder">📚</div>`;
+    const stars = book.rating > 0 ? `<span class="book-card-rating">⭐ ${parseFloat(book.rating).toFixed(1)}</span>` : '';
+    const dur = book.duration_sec > 0 ? formatTime(book.duration_sec) : '';
+    return `
+    <div class="book-card card" onclick="location.href='book.html?id=${book.id}'">
+      ${cover}
+      <button class="book-card-play" onclick="event.stopPropagation(); quickPlay(${book.id})">▶</button>
+      <div class="book-card-body">
+        <div class="book-card-title">${book.title}</div>
+        <div class="book-card-author">${book.author_name || ''}</div>
+        <div class="book-card-meta">${stars}${dur ? `<span>⏱ ${dur}</span>` : ''}</div>
+      </div>
+    </div>`;
+  }
+
+  function formatTime(sec) {
+    if (!sec || isNaN(sec)) return '0:00';
+    const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = Math.floor(sec%60);
+    return h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`;
+  }
+
+  async function quickPlay(bookId) {
+    if (!api.isLoggedIn()) { showToast(t('login_required'), 'info'); return; }
+    try {
+      const { book } = await api.books.get(bookId);
+      Player.play(book, book.parts, 0, book.user_progress?.progress_sec || 0);
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  async function loadGenres() {
+    try {
+      const { genres } = await api.books.genres();
+      const lang = i18n.current;
+      document.getElementById('genres-grid').innerHTML = genres.slice(0,12).map(g => `
+        <a href="catalog.html?genre_id=${g.id}" class="genre-card">
+          <div class="genre-icon">${GENRE_ICONS[g.slug] || '📚'}</div>
+          <div class="genre-name">${g['name_' + lang] || g.name_en}</div>
+        </a>`).join('');
+    } catch {}
+  }
+
+  async function loadStats() {
+    try {
+      const { books, users } = await api.books.publicStats();
+      document.getElementById('stat-books').textContent = books ?? 0;
+      document.getElementById('stat-users').textContent = users ?? 0;
+    } catch {
+      document.getElementById('stat-books').textContent = '—';
+      document.getElementById('stat-users').textContent = '—';
+    }
+  }
+
+  // Override i18n.set to reload genres & CTA on language change
+  const _origSet = i18n.set.bind(i18n);
+  i18n.set = function(lang) {
+    _origSet(lang);
+    loadGenres();
+    updateCTA();
+    const el = document.getElementById('footer-about-title-idx');
+    if (el) el.textContent = lang==='ru'?'О НАС':lang==='en'?'ABOUT US':'PAR MUMS';
+  };
+
+  // Init footer about title
+  (function() {
+    const lang = i18n.current;
+    const el = document.getElementById('footer-about-title-idx');
+    if (el) el.textContent = lang==='ru'?'О НАС':lang==='en'?'ABOUT US':'PAR MUMS';
+  })();
+
+  if (!api.getUser()) {
+    const btn = document.getElementById('hero-upload-btn');
+    if (btn) btn.href = 'login.html';
+  }
+
+  // Load books
+  api.books.list({ sort: 'listen_count', limit: 12 }).then(({ books }) => {
+    document.getElementById('popular-books').innerHTML = books.length
+      ? books.map(renderBookCard).join('')
+      : `<p class="text-muted" style="padding:20px">${t('no_books')}</p>`;
+  }).catch(() => {});
+
+  api.books.list({ sort: 'published_at', limit: 8 }).then(({ books }) => {
+    document.getElementById('new-books').innerHTML = books.length
+      ? books.map(renderBookCard).join('')
+      : `<p class="text-muted" style="padding:20px">${t('no_books')}</p>`;
+  }).catch(() => {});
+
+  loadGenres();
+  loadStats();
+  updateCTA();
+  </script>
+</body>
+</html>

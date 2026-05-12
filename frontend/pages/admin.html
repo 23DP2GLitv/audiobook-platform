@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — AudioBooks</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/player.css">
+  <style>
+    .admin-layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      min-height: calc(100vh - var(--nav-h));
+    }
+    @media (max-width: 900px) { .admin-layout { grid-template-columns: 1fr; } }
+
+    .admin-sidebar {
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      padding: 32px 16px;
+      position: sticky;
+      top: var(--nav-h);
+      height: calc(100vh - var(--nav-h));
+      overflow-y: auto;
+    }
+    .admin-sidebar-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-bottom: 12px;
+      padding: 0 8px;
+    }
+    .admin-nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: all var(--transition);
+      margin-bottom: 2px;
+      text-align: left;
+    }
+    .admin-nav-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+    .admin-nav-btn.active { background: var(--amber-glow); color: var(--amber); }
+
+    .admin-main { padding: 36px; }
+
+    /* Stats grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 36px;
+    }
+
+    /* Growth chart */
+    .growth-chart {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 32px;
+      overflow: hidden;
+    }
+    .chart-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+      height: 120px;
+      margin-top: 8px;
+      padding-top: 24px; /* место для числа сверху */
+    }
+    .chart-bar-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      height: 100%;
+      justify-content: flex-end;
+      position: relative;
+    }
+    .chart-bar {
+      width: 100%;
+      background: linear-gradient(180deg, var(--amber), var(--amber-dark));
+      border-radius: 4px 4px 0 0;
+      min-height: 4px;
+      transition: height 0.5s ease;
+    }
+    .chart-val {
+      position: absolute;
+      top: -20px;
+      font-size: 0.7rem;
+      color: var(--amber);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .chart-label { font-size: 0.62rem; color: var(--text-muted); margin-top: 4px; text-align: center; }
+
+    /* Table container */
+    .table-wrap {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .table-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .table-title { font-weight: 600; font-size: 0.95rem; }
+    .table-overflow { overflow-x: auto; }
+    .admin-panel { display: none; }
+    .admin-panel.active { display: block; }
+
+    /* Responsive admin */
+    @media (max-width: 900px) {
+      .admin-sidebar {
+        position: static;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        padding: 16px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .admin-sidebar-title { display: none; }
+      .admin-nav-btn { width: auto; flex: 0 0 auto; }
+      .admin-main { padding: 20px 16px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 480px) {
+      .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .admin-main { padding: 16px 12px; }
+      .table-header { flex-direction: column; align-items: flex-start; }
+      .table-header .flex { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <div class="main-content">
+    <div class="admin-layout">
+      <!-- Sidebar -->
+      <aside class="admin-sidebar">
+        <div class="admin-sidebar-title" data-i18n="admin_title">Admin</div>
+        <button class="admin-nav-btn active" onclick="showPanel('stats',this)">📊 <span data-i18n="admin_stats">Statistika</span></button>
+        <button class="admin-nav-btn" onclick="showPanel('users',this)">👥 <span data-i18n="admin_users">Lietotāji</span></button>
+        <button class="admin-nav-btn" onclick="showPanel('books',this)">📚 <span data-i18n="admin_books">Grāmatas</span></button>
+        <button class="admin-nav-btn" onclick="showPanel('reviews',this)">💬 <span data-i18n="admin_reviews">Atsauksmes</span></button>
+        <button class="admin-nav-btn" onclick="showPanel('modlog',this)">📋 <span data-i18n="admin_modlog">Moderācijas Žurnāls</span></button>
+        <button class="admin-nav-btn" onclick="showPanel('pending',this)">📨 <span id="nav-pending-lbl">Gaida apstiprinājumu</span></button>
+      </aside>
+
+      <!-- Main content -->
+      <main class="admin-main">
+        <!-- ── Stats Panel ───────────────────────────── -->
+        <div id="panel-stats" class="admin-panel active">
+          <h1 class="section-title" style="margin-bottom:24px" data-i18n="admin_stats"></h1>
+          <div class="stats-grid" id="stats-grid">
+            <div class="stat-card skeleton" style="height:100px"></div>
+            <div class="stat-card skeleton" style="height:100px"></div>
+            <div class="stat-card skeleton" style="height:100px"></div>
+            <div class="stat-card skeleton" style="height:100px"></div>
+          </div>
+          <div class="growth-chart">
+            <div style="font-size:0.875rem;font-weight:600" id="chart-title"></div>
+            <div class="chart-bars" id="growth-chart"></div>
+          </div>
+          <div class="table-wrap">
+            <div class="table-header">
+              <div class="table-title" id="top-books-title"></div>
+            </div>
+            <div class="table-overflow">
+              <table class="data-table" id="top-books-table">
+                <thead><tr>
+                  <th>#</th>
+                  <th id="th-title"></th>
+                  <th id="th-author-top"></th>
+                  <th id="th-listens"></th>
+                  <th>⭐ Rating</th>
+                </tr></thead>
+                <tbody id="top-books-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Users Panel ──────────────────────────── -->
+        <div id="panel-users" class="admin-panel">
+          <div class="table-header" style="background:none;padding:0;margin-bottom:20px">
+            <h1 class="section-title" data-i18n="admin_users"></h1>
+            <div class="flex gap-8">
+              <input type="text" id="user-search" class="form-control" style="width:220px">
+              <select id="user-role-filter" class="form-control" style="width:140px">
+                <option value="" id="opt-all-roles"></option>
+                <option value="user" id="opt-role-user"></option>
+                <option value="moderator" id="opt-role-mod"></option>
+                <option value="admin" id="opt-role-admin"></option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <div class="table-overflow">
+              <table class="data-table">
+                <thead><tr>
+                  <th>ID</th>
+                  <th id="th-username"></th>
+                  <th>Email</th>
+                  <th id="th-role"></th>
+                  <th id="th-regdate"></th>
+                  <th id="th-status"></th>
+                  <th id="th-actions"></th>
+                </tr></thead>
+                <tbody id="users-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="users-pagination" class="pagination"></div>
+        </div>
+
+        <!-- ── Books Panel ──────────────────────────── -->
+        <div id="panel-books" class="admin-panel">
+          <div class="table-header" style="background:none;padding:0;margin-bottom:20px">
+            <h1 class="section-title" data-i18n="admin_books"></h1>
+            <input type="text" id="books-search" class="form-control" style="width:280px">
+          </div>
+          <div class="table-wrap">
+            <div class="table-overflow">
+              <table class="data-table">
+                <thead><tr>
+                  <th>ID</th>
+                  <th id="th-book-title"></th>
+                  <th id="th-book-author"></th>
+                  <th id="th-book-rating"></th>
+                  <th id="th-book-listens"></th>
+                  <th id="th-book-date"></th>
+                  <th id="th-book-status"></th>
+                  <th></th>
+                </tr></thead>
+                <tbody id="books-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="books-pagination" class="pagination"></div>
+        </div>
+
+        <!-- ── Reviews Panel ────────────────────────── -->
+        <div id="panel-reviews" class="admin-panel">
+          <div class="table-header" style="background:none;padding:0;margin-bottom:20px">
+            <h1 class="section-title" data-i18n="admin_reviews"></h1>
+            <input type="text" id="reviews-search" class="form-control" style="width:280px">
+          </div>
+          <div class="table-wrap">
+            <div class="table-overflow">
+              <table class="data-table">
+                <thead><tr>
+                  <th id="th-rev-user"></th>
+                  <th id="th-rev-book"></th>
+                  <th id="th-rev-rating"></th>
+                  <th id="th-rev-comment"></th>
+                  <th id="th-rev-date"></th>
+                  <th></th>
+                </tr></thead>
+                <tbody id="reviews-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="reviews-pagination" class="pagination"></div>
+        </div>
+
+        <!-- ── Modlog Panel ─────────────────────────── -->
+        <div id="panel-modlog" class="admin-panel">
+          <div class="table-header" style="background:none;padding:0;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+            <h1 class="section-title" data-i18n="admin_modlog"></h1>
+            <div class="flex gap-8" style="flex-wrap:wrap">
+              <input type="text" id="modlog-search" class="form-control" style="width:200px">
+              <select id="modlog-action-filter" class="form-control" style="width:180px">
+                <option value="" id="modlog-all-opt"></option>
+                <option value="block_user">block_user</option>
+                <option value="unblock_user">unblock_user</option>
+                <option value="change_role">change_role</option>
+                <option value="delete_user">delete_user</option>
+                <option value="delete_book">delete_book</option>
+                <option value="delete_review">delete_review</option>
+              </select>
+              <select id="modlog-sort" class="form-control" style="width:160px">
+                <option value="desc" id="modlog-sort-desc"></option>
+                <option value="asc" id="modlog-sort-asc"></option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <div class="table-overflow">
+              <table class="data-table">
+                <thead><tr>
+                  <th id="th-moderator"></th><th id="th-action"></th><th id="th-object"></th><th id="th-reason"></th><th id="th-date"></th>
+                </tr></thead>
+                <tbody id="modlog-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="modlog-pagination" class="pagination"></div>
+        </div>
+
+        <!-- ── Pending Books Panel ─────────────────────── -->
+        <div id="panel-pending" class="admin-panel">
+          <h1 class="section-title" style="margin-bottom:24px" id="pending-title"></h1>
+          <div id="pending-list"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="../js/i18n.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/player.js"></script>
+  <script src="../js/nav.js"></script>
+  <script src="../js/confirm-modal.js"></script>
+  <script>
+    if (!api.isMod()) window.location.href = 'index.html';
+
+    let usersPage = 1;
+    let currentPanel = 'stats';
+    let searchTimer;
+
+    function getLang() { return i18n.current; }
+    function tx(lv, ru, en) { const l = getLang(); return l==='ru'?ru:l==='en'?en:lv; }
+
+    function showPanel(name, btn) {
+      document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.admin-nav-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('panel-' + name).classList.add('active');
+      if (btn) btn.classList.add('active');
+      currentPanel = name;
+
+      if (name === 'stats')   loadStats();
+      else if (name === 'users')   loadUsers();
+      else if (name === 'books')   loadAdminBooks();
+      else if (name === 'reviews') loadAdminReviews();
+      else if (name === 'modlog')  loadModlog();
+      else if (name === 'pending') loadPending();
+    }
+
+    // ── Stats ──────────────────────────────────────────────
+    async function loadStats() {
+      try {
+        const { stats, user_growth, top_books } = await api.admin.stats();
+        const lang = i18n.current;
+        const blockedLbl  = lang==='ru'?'Заблокировано':lang==='en'?'Blocked':'Bloķēti';
+        const todayUsLbl  = lang==='ru'?'Новых сегодня':lang==='en'?'New today':'Šodien jauni';
+        const todayBkLbl  = lang==='ru'?'Книг сегодня':lang==='en'?'Books today':'Šodien grāmatas';
+        document.getElementById('stats-grid').innerHTML = `
+          <div class="stat-card"><div class="stat-card-icon">👥</div>
+            <div class="stat-card-label">${t('total_users')}</div>
+            <div class="stat-card-value">${stats.total_users}</div></div>
+          <div class="stat-card"><div class="stat-card-icon">📚</div>
+            <div class="stat-card-label">${t('total_books')}</div>
+            <div class="stat-card-value">${stats.total_books}</div></div>
+          <div class="stat-card"><div class="stat-card-icon">💬</div>
+            <div class="stat-card-label">${t('total_reviews')}</div>
+            <div class="stat-card-value">${stats.total_reviews}</div></div>
+          <div class="stat-card"><div class="stat-card-icon">🚫</div>
+            <div class="stat-card-label">${blockedLbl}</div>
+            <div class="stat-card-value">${stats.blocked_users}</div></div>
+          <div class="stat-card"><div class="stat-card-icon">🆕</div>
+            <div class="stat-card-label">${todayUsLbl}</div>
+            <div class="stat-card-value">${stats.new_users_today}</div></div>
+          <div class="stat-card"><div class="stat-card-icon">📖</div>
+            <div class="stat-card-label">${todayBkLbl}</div>
+            <div class="stat-card-value">${stats.new_books_today}</div></div>
+        `;
+
+        // Growth chart
+        const maxVal = Math.max(...user_growth.map(d => d.count), 1);
+        document.getElementById('growth-chart').innerHTML = user_growth.length
+          ? user_growth.map(d => {
+            const pct = Math.round((d.count / maxVal) * 100);
+            return `
+            <div class="chart-bar-wrap">
+              <span class="chart-val">${d.count}</span>
+              <div class="chart-bar" style="height:${Math.max(pct, 4)}%"></div>
+              <span class="chart-label">${new Date(d.day).toLocaleDateString(i18n.current==='lv'?'lv':i18n.current==='ru'?'ru':'en',{month:'short',day:'numeric'})}</span>
+            </div>`;
+          }).join('')
+          : `<div style="color:var(--text-muted);font-size:0.875rem;padding:20px 0">Nav datu</div>`;
+
+        // Top books
+        document.getElementById('top-books-body').innerHTML = top_books.map((b, i) => `
+          <tr>
+            <td>${i+1}</td>
+            <td><a href="book.html?id=${b.id}" style="color:var(--amber)">${b.title}</a></td>
+            <td>${b.author}</td>
+            <td>${b.listen_count}</td>
+            <td>${parseFloat(b.rating||0).toFixed(1)}</td>
+          </tr>`).join('');
+      } catch (e) { console.error(e); }
+    }
+
+    // ── Users ─────────────────────────────────────────────
+    async function loadUsers() {
+      const q    = document.getElementById('user-search')?.value || '';
+      const role = document.getElementById('user-role-filter')?.value || '';
+      try {
+        const { users, pagination } = await api.admin.users({ q, role, page: usersPage });
+        document.getElementById('users-table-body').innerHTML = users.map(u => {
+          const lang = i18n.current;
+          const blockedTxt  = lang==='ru'?'Заблокирован':lang==='en'?'Blocked':'Bloķēts';
+          const activeTxt   = lang==='ru'?'Активен':lang==='en'?'Active':'Aktīvs';
+          const userTxt     = lang==='ru'?'Пользователь':lang==='en'?'User':'Lietotājs';
+          const modTxt      = lang==='ru'?'Модератор':lang==='en'?'Moderator':'Moderators';
+          const adminTxt    = lang==='ru'?'Администратор':lang==='en'?'Administrator':'Administrators';
+          return `<tr>
+            <td>${u.id}</td>
+            <td><strong>${u.username}</strong></td>
+            <td>${u.email}</td>
+            <td>
+              ${api.isAdmin()
+                ? `<select class="form-control" style="padding:4px 8px;width:auto;font-size:0.8rem"
+                    onchange="changeRole(${u.id}, this.value)" ${api.getUser()?.id === u.id ? 'disabled' : ''}>
+                    <option value="user"      ${u.role==='user'?'selected':''}>${userTxt}</option>
+                    <option value="moderator" ${u.role==='moderator'?'selected':''}>${modTxt}</option>
+                    <option value="admin"     ${u.role==='admin'?'selected':''}>${adminTxt}</option>
+                  </select>`
+                : `<span class="badge badge-gray">${u.role==='admin'?adminTxt:u.role==='moderator'?modTxt:userTxt}</span>`}
+            </td>
+            <td>${fmtDate(u.registered_at)}</td>
+            <td>
+              ${u.is_blocked
+                ? blockedBadge(u, blockedTxt)
+                : `<span class="badge badge-green">${activeTxt}</span>`}
+            </td>
+            <td style="white-space:nowrap">
+              ${u.is_blocked
+                ? `<button class="btn btn-secondary btn-sm" onclick="unblockUser(${u.id})">${t('unblock_user')}</button>`
+                : `<button class="btn btn-secondary btn-sm" onclick="blockUser(${u.id})">${t('block_user')}</button>`}
+              ${api.isAdmin() ? `<button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id})" style="margin-left:4px">🗑</button>` : ''}
+            </td>
+          </tr>`;
+        }).join('');
+
+        // Pagination
+        const pages = Math.ceil(pagination.total / 30);
+        if (pages > 1) {
+          let pag = '';
+          for (let p = 1; p <= pages; p++) {
+            pag += `<button class="page-btn ${p===usersPage?'active':''}" onclick="usersPage=${p};loadUsers()">${p}</button>`;
+          }
+          document.getElementById('users-pagination').innerHTML = pag;
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    function blockedBadge(u, blockedTxt) {
+      if (!u.is_blocked) return '';
+      const reason = (u.block_reason || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      const blockedAt = u.blocked_at || '';
+      const cursor = (u.block_reason || u.blocked_at) ? 'pointer' : 'default';
+      return `<span class="badge badge-red" style="cursor:${cursor}"
+        onclick="showBlockReason('${u.username.replace(/'/g,"\\'")}','${reason}','${blockedAt}')">
+        ${blockedTxt}</span>`;
+    }
+
+    // ── Переводимые модальные окна с полем причины ─────────
+    function reasonModal({ title, text, icon, confirmText, reasonLabel, reasonRequired }) {
+      return new Promise(resolve => {
+        document.getElementById('reason-modal-overlay')?.remove();
+        const overlay = document.createElement('div');
+        overlay.id = 'reason-modal-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px';
+        overlay.innerHTML = `
+          <div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-xl);padding:32px;max-width:460px;width:100%">
+            <div style="font-size:2rem;text-align:center;margin-bottom:12px">${icon}</div>
+            <div style="font-family:var(--font-display);font-size:1.2rem;text-align:center;margin-bottom:8px">${title}</div>
+            <div style="font-size:0.875rem;color:var(--text-secondary);text-align:center;margin-bottom:20px">${text}</div>
+            <div class="form-group">
+              <label class="form-label">${reasonLabel}${reasonRequired
+                ? ' <span style="color:var(--amber)">*</span>'
+                : ' <span style="color:var(--text-muted);font-size:0.8rem">(' + tx('neobligāts','необязательно','optional') + ')</span>'
+              }</label>
+              <textarea id="delete-reason-input" class="form-control" rows="3" style="min-height:70px"></textarea>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:4px">
+              <button class="btn btn-secondary" id="reason-cancel" style="flex:1">${tx('Atcelt','Отмена','Cancel')}</button>
+              <button class="btn btn-danger" id="reason-ok" style="flex:1">${confirmText || tx('Dzēst','Удалить','Delete')}</button>
+            </div>
+          </div>`;
+        document.body.appendChild(overlay);
+        document.getElementById('reason-cancel').addEventListener('click', () => { overlay.remove(); resolve(null); });
+        document.getElementById('reason-ok').addEventListener('click', () => {
+          const reason = document.getElementById('delete-reason-input').value.trim();
+          if (reasonRequired && !reason) {
+            document.getElementById('delete-reason-input').style.borderColor = '#EF4444';
+            return;
+          }
+          overlay.remove(); resolve(reason || '');
+        });
+        overlay.addEventListener('click', e => { if (e.target === overlay) { overlay.remove(); resolve(null); } });
+      });
+    }
+
+    async function changeRole(id, role) {
+      const roleName = role==='admin'?tx('Administrators','Администратор','Administrator'):role==='moderator'?tx('Moderators','Модератор','Moderator'):tx('Lietotājs','Пользователь','User');
+      try { await api.admin.setRole(id, role); showToast(tx(`Loma mainīta uz "${roleName}"`,`Роль изменена на "${roleName}"`,`Role changed to "${roleName}"`), 'success'); }
+      catch (e) { showToast(e.message, 'error'); loadUsers(); }
+    }
+
+    async function blockUser(id) {
+      const reason = await reasonModal({
+        title: tx('Bloķēt lietotāju','Заблокировать пользователя','Block user'),
+        text:  tx('Norādiet bloķēšanas iemeslu.','Укажите причину блокировки.','Enter the reason for blocking.'),
+        icon: '🚫', reasonLabel: t('block_reason'), reasonRequired: true,
+        confirmText: t('block_user'),
+      });
+      if (reason === null) return;
+      try { await api.admin.block(id, reason); showToast(tx('Lietotājs bloķēts','Пользователь заблокирован','User blocked'), 'success'); loadUsers(); }
+      catch (e) { showToast(e.message, 'error'); }
+    }
+
+    async function unblockUser(id) {
+      try { await api.admin.unblock(id); showToast(tx('Lietotājs atbloķēts','Пользователь разблокирован','User unblocked'), 'success'); loadUsers(); }
+      catch (e) { showToast(e.message, 'error'); }
+    }
+
+    async function deleteUser(id) {
+      const reason = await reasonModal({
+        title: tx('Dzēst lietotāju?','Удалить пользователя?','Delete user?'),
+        text:  tx('Šo darbību nevar atcelt.','Это действие нельзя отменить.','This cannot be undone.'),
+        icon: '👤', reasonLabel: tx('Dzēšanas iemesls','Причина удаления','Reason for deletion'), reasonRequired: true,
+        confirmText: t('delete_user'),
+      });
+      if (reason === null) return;
+      try {
+        await api.request('DELETE', `/admin/users/${id}`, { reason });
+        showToast(tx('Lietotājs dzēsts','Пользователь удалён','User deleted'), 'success');
+        loadUsers();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    // ── Books ─────────────────────────────────────────────
+    let booksData = [], booksPage = 1;
+    const PER_PAGE = 20;
+
+    function renderPagination(containerId, currentPage, total, onPage) {
+      const pages = Math.ceil(total / PER_PAGE);
+      if (pages <= 1) { document.getElementById(containerId).innerHTML = ''; return; }
+      let html = '';
+      html += `<button class="page-btn" onclick="${onPage}(${currentPage-1})" ${currentPage<=1?'disabled':''}>‹</button>`;
+      for (let p = Math.max(1, currentPage-2); p <= Math.min(pages, currentPage+2); p++) {
+        html += `<button class="page-btn ${p===currentPage?'active':''}" onclick="${onPage}(${p})">${p}</button>`;
+      }
+      html += `<button class="page-btn" onclick="${onPage}(${currentPage+1})" ${currentPage>=pages?'disabled':''}>›</button>`;
+      document.getElementById(containerId).innerHTML = html;
+    }
+
+    async function loadAdminBooks() {
+      const q = document.getElementById('books-search')?.value.trim() || '';
+      try {
+        const { books } = await api.admin.books({ limit: 500 });
+        booksData = q
+          ? books.filter(b =>
+              b.title.toLowerCase().includes(q.toLowerCase()) ||
+              (b.author||'').toLowerCase().includes(q.toLowerCase()))
+          : books;
+        booksPage = 1;
+        renderBooksPage();
+      } catch (e) { console.error(e); }
+    }
+
+    function renderBooksPage(page) {
+      if (page) booksPage = page;
+      const start = (booksPage - 1) * PER_PAGE;
+      const slice = booksData.slice(start, start + PER_PAGE);
+      const lang = i18n.current;
+      const pubTxt  = lang==='ru'?'Публичная':lang==='en'?'Public':'Publisks';
+      const privTxt = lang==='ru'?'Приватная':lang==='en'?'Private':'Privāts';
+      const delTxt  = lang==='ru'?'Удалена':lang==='en'?'Deleted':'Dzēsts';
+      document.getElementById('books-table-body').innerHTML = slice.map(b => `
+        <tr>
+          <td>${b.id}</td>
+          <td><a href="book.html?id=${b.id}" style="color:var(--amber)">${b.title}</a></td>
+          <td>${b.author}</td>
+          <td>${parseFloat(b.rating||0).toFixed(1)}</td>
+          <td>${b.listen_count}</td>
+          <td>${fmtDate(b.published_at)}</td>
+          <td>${b.is_deleted
+            ? `<span class="badge badge-red">${delTxt}</span>`
+            : b.is_public
+              ? `<span class="badge badge-green">${pubTxt}</span>`
+              : `<span class="badge badge-gray">${privTxt}</span>`}</td>
+          <td>${!b.is_deleted ? `<button class="btn btn-danger btn-sm" onclick="adminDeleteBook(${b.id})">🗑</button>` : ''}</td>
+        </tr>`).join('');
+      renderPagination('books-pagination', booksPage, booksData.length, 'renderBooksPage');
+    }
+
+    async function adminDeleteBook(id) {
+      const reason = await reasonModal({
+        title: tx('Dzēst grāmatu?','Удалить книгу?','Delete book?'),
+        text:  tx('Grāmata tiks dzēsta.','Книга будет удалена.','The book will be deleted.'),
+        icon: '📚', reasonLabel: tx('Dzēšanas iemesls','Причина удаления','Reason'), reasonRequired: true,
+        confirmText: t('delete'),
+      });
+      if (reason === null) return;
+      try { await api.books.delete(id, reason); showToast(tx('Grāmata dzēsta','Книга удалена','Book deleted'), 'success'); loadAdminBooks(); }
+      catch (e) { showToast(e.message, 'error'); }
+    }
+
+    // ── Reviews ───────────────────────────────────────────
+    let reviewsData = [], reviewsPage = 1;
+
+    async function loadAdminReviews() {
+      const q = document.getElementById('reviews-search')?.value.trim() || '';
+      try {
+        const { reviews } = await api.admin.reviews();
+        reviewsData = q
+          ? reviews.filter(r =>
+              (r.comment||'').toLowerCase().includes(q.toLowerCase()) ||
+              (r.username||'').toLowerCase().includes(q.toLowerCase()) ||
+              (r.book_title||'').toLowerCase().includes(q.toLowerCase()))
+          : reviews;
+        reviewsPage = 1;
+        renderReviewsPage();
+      } catch (e) { console.error(e); }
+    }
+
+    function renderReviewsPage(page) {
+      if (page) reviewsPage = page;
+      const start = (reviewsPage - 1) * PER_PAGE;
+      const slice = reviewsData.slice(start, start + PER_PAGE);
+      document.getElementById('reviews-table-body').innerHTML = slice.map(r => `
+        <tr>
+          <td>${r.username}</td>
+          <td><a href="book.html?id=${r.book_id}" style="color:var(--amber)">${r.book_title}</a></td>
+          <td>${'⭐'.repeat(r.rating)}</td>
+          <td>${r.comment?.substring(0,60) || '—'}${r.comment?.length>60?'...':''}</td>
+          <td>${fmtDate(r.created_at)}</td>
+          <td>
+            ${!r.is_deleted
+              ? `<button class="btn btn-danger btn-sm" onclick="adminDeleteReview(${r.id}, ${r.book_id})">🗑</button>`
+              : `<span class="badge badge-red">${tx('Dzēsts','Удалён','Deleted')}</span>`}
+          </td>
+        </tr>`).join('');
+      renderPagination('reviews-pagination', reviewsPage, reviewsData.length, 'renderReviewsPage');
+    }
+
+    async function adminDeleteReview(reviewId, bookId) {
+      const reason = await reasonModal({
+        title: tx('Dzēst atsauksmi?','Удалить отзыв?','Delete review?'),
+        text:  tx('Atsauksme tiks dzēsta.','Отзыв будет удалён.','The review will be deleted.'),
+        icon: '💬', reasonLabel: tx('Dzēšanas iemesls','Причина удаления','Reason'), reasonRequired: true,
+        confirmText: t('delete'),
+      });
+      if (reason === null) return;
+      try { await api.reviews.delete(bookId, reviewId, reason); showToast(tx('Atsauksme dzēsta','Отзыв удалён','Review deleted'), 'success'); loadAdminReviews(); }
+      catch (e) { showToast(e.message, 'error'); }
+    }
+
+    // ── Modlog ────────────────────────────────────────────
+    let modlogData = [], modlogPage = 1;
+
+    async function loadModlog() {
+      try {
+        const { logs } = await api.admin.modlog();
+        modlogData = logs;
+        modlogPage = 1;
+        applyModlogFilters();
+      } catch (e) { console.error(e); }
+    }
+
+    function applyModlogFilters() {
+      const q      = (document.getElementById('modlog-search')?.value || '').toLowerCase();
+      const action = document.getElementById('modlog-action-filter')?.value || '';
+      const sort   = document.getElementById('modlog-sort')?.value || 'desc';
+
+      let data = [...modlogData];
+      if (q)      data = data.filter(l =>
+        (l.moderator_name||'').toLowerCase().includes(q) ||
+        (l.reason||'').toLowerCase().includes(q) ||
+        String(l.object_id).includes(q)
+      );
+      if (action) data = data.filter(l => l.action === action);
+      data.sort((a, b) => sort === 'asc'
+        ? new Date(a.created_at) - new Date(b.created_at)
+        : new Date(b.created_at) - new Date(a.created_at));
+
+      modlogPage = 1;
+      renderModlogPage(1, data);
+    }
+
+    let _modlogFiltered = [];
+    function renderModlogPage(page, data) {
+      if (data) _modlogFiltered = data;
+      if (page) modlogPage = page;
+      const start = (modlogPage - 1) * PER_PAGE;
+      const slice = _modlogFiltered.slice(start, start + PER_PAGE);
+      document.getElementById('modlog-body').innerHTML = slice.map(l => `
+        <tr>
+          <td>${l.moderator_name}</td>
+          <td><span class="badge badge-amber">${l.action}</span></td>
+          <td>${l.object_type} #${l.object_id}</td>
+          <td>${l.reason || '—'}</td>
+          <td>${fmtDateTime(l.created_at)}</td>
+        </tr>`).join('');
+      renderPagination('modlog-pagination', modlogPage, _modlogFiltered.length, 'renderModlogPage');
+    }
+
+    function fmtDate(d) {
+      if (!d) return '—';
+      return new Date(d).toLocaleDateString();
+    }
+    function fmtDateTime(d) {
+      if (!d) return '—';
+      return new Date(d).toLocaleString([], { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', timeZone: 'Europe/Riga' });
+    }
+
+    function showBlockReason(username, reason, blockedAt) {
+      document.getElementById('block-reason-overlay')?.remove();
+      const lang = i18n.current;
+      const blockedOnLbl = lang==='ru'?'Заблокирован':lang==='en'?'Blocked on':'Bloķēts';
+      const reasonLbl    = lang==='ru'?'Причина блокировки':lang==='en'?'Block reason':t('block_reason');
+      const closeLbl     = lang==='ru'?'Закрыть':lang==='en'?'Close':t('close');
+      const overlay = document.createElement('div');
+      overlay.id = 'block-reason-overlay';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px';
+      overlay.innerHTML = `
+        <div style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-xl);padding:32px;max-width:480px;width:100%">
+          <div style="font-size:1.3rem;font-family:var(--font-display);margin-bottom:20px">🚫 ${username}</div>
+          ${blockedAt ? `
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px">${blockedOnLbl}:</div>
+          <div style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:16px">${fmtDateTime(blockedAt)}</div>
+          ` : ''}
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px">${reasonLbl}:</div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:16px;font-size:0.9rem;color:var(--text-secondary);line-height:1.6;word-break:break-word">${reason || '—'}</div>
+          <button id="block-reason-close" class="btn btn-secondary" style="margin-top:20px;width:100%">${closeLbl}</button>
+        </div>`;
+      document.body.appendChild(overlay);
+      document.getElementById('block-reason-close').addEventListener('click', () => overlay.remove());
+      overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    }
+
+    // ── Pending Books ─────────────────────────────────────
+    async function loadPending() {
+      const el = document.getElementById('pending-list');
+      el.innerHTML = '<div class="spinner"></div>';
+      try {
+        const { books } = await api.admin.pendingBooks();
+        const lang = i18n.current;
+        const noBooks   = lang==='ru'?'Нет книг на проверке':lang==='en'?'No books pending review':'Nav grāmatu pārbaudei';
+        const approveTx = lang==='ru'?'Опубликовать':lang==='en'?'Approve':'Apstiprināt';
+        const rejectTx  = lang==='ru'?'Отклонить':lang==='en'?'Reject':'Noraidīt';
+        const byTx      = lang==='ru'?'Автор':lang==='en'?'By':'Autors';
+        const subTx     = lang==='ru'?'Подано':lang==='en'?'Submitted':'Iesniegts';
+
+        if (!books.length) {
+          el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">✅</div><p>${noBooks}</p></div>`;
+          return;
+        }
+
+        el.innerHTML = books.map(b => `
+          <div class="table-wrap" style="margin-bottom:16px;padding:24px">
+            <div style="display:flex;gap:20px;align-items:flex-start">
+              ${b.cover_url
+                ? `<img src="http://localhost:3000${b.cover_url}" style="width:80px;height:120px;object-fit:cover;border-radius:8px;flex-shrink:0">`
+                : `<div style="width:80px;height:120px;background:var(--bg-elevated);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0">📚</div>`}
+              <div style="flex:1;min-width:0">
+                <div style="font-family:var(--font-display);font-size:1.1rem;font-weight:600;margin-bottom:4px">${b.title}</div>
+                <div style="font-size:0.82rem;color:var(--amber);margin-bottom:8px">${byTx}: ${b.author}</div>
+                <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px">
+                  ${b['genre_'+lang]||''} ${b.lang_lv ? '· '+b.lang_lv : ''}
+                  ${b.duration_sec ? '· ⏱ '+Math.floor(b.duration_sec/60)+'m' : ''}
+                </div>
+                <div style="font-size:0.85rem;color:var(--text-secondary);max-height:80px;overflow:hidden;line-height:1.5;margin-bottom:12px">${b.description||''}</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:16px">${subTx}: ${fmtDate(b.created_at)}</div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                  <a href="book.html?id=${b.id}" class="btn btn-secondary btn-sm">🎧 ${lang==='ru'?'Открыть':'Open'}</a>
+                  <button class="btn btn-primary btn-sm" onclick="approveBook(${b.id}, this)">✓ ${approveTx}</button>
+                  <button class="btn btn-danger btn-sm" onclick="rejectBook(${b.id}, this)">✕ ${rejectTx}</button>
+                </div>
+              </div>
+            </div>
+          </div>`).join('');
+      } catch (e) { el.innerHTML = `<p>${e.message}</p>`; }
+    }
+
+    async function approveBook(id, btn) {
+      btn.disabled = true;
+      try {
+        await api.admin.approveBook(id);
+        const lang = i18n.current;
+        showToast(lang==='ru'?'Книга опубликована!':lang==='en'?'Book approved!':'Grāmata apstiprināta!', 'success');
+        loadPending();
+      } catch(e) { showToast(e.message, 'error'); btn.disabled = false; }
+    }
+
+    async function rejectBook(id, btn) {
+      const lang = i18n.current;
+      const reason = await reasonModal({
+        title: lang==='ru'?'Отклонить книгу?':lang==='en'?'Reject book?':'Noraidīt grāmatu?',
+        text:  lang==='ru'?'Автор увидит причину отклонения.':lang==='en'?'The author will see the rejection reason.':'Autors redzēs noraidīšanas iemeslu.',
+        icon: '❌',
+        reasonLabel: lang==='ru'?'Причина отклонения':lang==='en'?'Rejection reason':'Noraidīšanas iemesls',
+        reasonRequired: true,
+        confirmText: lang==='ru'?'Отклонить':lang==='en'?'Reject':'Noraidīt',
+      });
+      if (reason === null) return;
+      btn.disabled = true;
+      try {
+        await api.admin.rejectBook(id, reason);
+        showToast(lang==='ru'?'Книга отклонена':lang==='en'?'Book rejected':'Grāmata noraidīta', 'info');
+        loadPending();
+      } catch(e) { showToast(e.message, 'error'); btn.disabled = false; }
+    }
+
+    // ── Full i18n apply ───────────────────────────────────
+    function applyAdminI18n() {
+      const lang = i18n.current;
+      const T = {
+        lv: {
+          chartTitle: '📈 Jauni lietotāji (7 dienas)',
+          topBooks: '🏆 Top 10 Grāmatas',
+          colTitle: 'Nosaukums', colAuthor: 'Autors', colListens: '👁 Klausīts',
+          colUsername: 'Lietotājvārds', colRole: 'Loma', colRegDate: 'Reģ. datums', colStatus: 'Statuss', colActions: 'Darbības',
+          colRating: 'Vērtējums', colDate: 'Datums', colBookStatus: 'Statuss',
+          colRevUser: 'Lietotājs', colRevBook: 'Grāmata', colRevRating: 'Vērtējums', colRevComment: 'Komentārs',
+          thModerator: 'Moderators', thAction: 'Darbība', thObject: 'Objekts', thReason: 'Iemesls', thDate: 'Datums',
+          allRoles: 'Visas lomas', roleUser: 'Lietotājs', roleMod: 'Moderators', roleAdmin: 'Administrators',
+          allActions: 'Visas darbības', sortDesc: 'Jaunākie pirmie', sortAsc: 'Vecākie pirmie',
+          searchUser: 'Meklēt...', searchBooks: 'Meklēt pēc nosaukuma vai autora...', searchReviews: 'Meklēt pēc teksta vai autora...', searchModlog: 'Meklēt pēc moderatora, lietotāja vai iemesla...',
+        },
+        ru: {
+          chartTitle: '📈 Новые пользователи (7 дней)',
+          topBooks: '🏆 Топ 10 книг',
+          colTitle: 'Название', colAuthor: 'Автор', colListens: '👁 Слушатели',
+          colUsername: 'Имя пользователя', colRole: 'Роль', colRegDate: 'Дата рег.', colStatus: 'Статус', colActions: 'Действия',
+          colRating: 'Рейтинг', colDate: 'Дата', colBookStatus: 'Статус',
+          colRevUser: 'Пользователь', colRevBook: 'Книга', colRevRating: 'Оценка', colRevComment: 'Комментарий',
+          thModerator: 'Модератор', thAction: 'Действие', thObject: 'Объект', thReason: 'Причина', thDate: 'Дата',
+          allRoles: 'Все роли', roleUser: 'Пользователь', roleMod: 'Модератор', roleAdmin: 'Администратор',
+          allActions: 'Все действия', sortDesc: 'Сначала новые', sortAsc: 'Сначала старые',
+          searchUser: 'Поиск...', searchBooks: 'Поиск по названию или автору...', searchReviews: 'Поиск по тексту или автору...', searchModlog: 'Поиск по модератору, пользователю или причине...',
+        },
+        en: {
+          chartTitle: '📈 New users (7 days)',
+          topBooks: '🏆 Top 10 Books',
+          colTitle: 'Title', colAuthor: 'Author', colListens: '👁 Listens',
+          colUsername: 'Username', colRole: 'Role', colRegDate: 'Reg. date', colStatus: 'Status', colActions: 'Actions',
+          colRating: 'Rating', colDate: 'Date', colBookStatus: 'Status',
+          colRevUser: 'User', colRevBook: 'Book', colRevRating: 'Rating', colRevComment: 'Comment',
+          thModerator: 'Moderator', thAction: 'Action', thObject: 'Object', thReason: 'Reason', thDate: 'Date',
+          allRoles: 'All roles', roleUser: 'User', roleMod: 'Moderator', roleAdmin: 'Administrator',
+          allActions: 'All actions', sortDesc: 'Newest first', sortAsc: 'Oldest first',
+          searchUser: 'Search...', searchBooks: 'Search by title or author...', searchReviews: 'Search by text or author...', searchModlog: 'Search by moderator, user or reason...',
+        },
+      };
+      const tx = T[lang] || T.lv;
+
+      const s = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+      const p = (id, text) => { const el = document.getElementById(id); if (el) el.placeholder = text; };
+
+      // Stats
+      s('chart-title', tx.chartTitle);
+      s('top-books-title', tx.topBooks);
+      s('th-title', tx.colTitle); s('th-author-top', tx.colAuthor); s('th-listens', tx.colListens);
+
+      // Users table headers
+      s('th-username', tx.colUsername); s('th-role', tx.colRole); s('th-regdate', tx.colRegDate);
+      s('th-status', tx.colStatus); s('th-actions', tx.colActions);
+
+      // Users role filter
+      s('opt-all-roles', tx.allRoles); s('opt-role-user', tx.roleUser);
+      s('opt-role-mod', tx.roleMod); s('opt-role-admin', tx.roleAdmin);
+
+      // Books table headers
+      s('th-book-title', tx.colTitle); s('th-book-author', tx.colAuthor);
+      s('th-book-rating', tx.colRating); s('th-book-listens', tx.colListens);
+      s('th-book-date', tx.colDate); s('th-book-status', tx.colBookStatus);
+
+      // Reviews table headers
+      s('th-rev-user', tx.colRevUser); s('th-rev-book', tx.colRevBook);
+      s('th-rev-rating', tx.colRevRating); s('th-rev-comment', tx.colRevComment); s('th-rev-date', tx.colDate);
+
+      // Modlog
+      s('th-moderator', tx.thModerator); s('th-action', tx.thAction);
+      s('th-object', tx.thObject); s('th-reason', tx.thReason); s('th-date', tx.thDate);
+      s('modlog-all-opt', tx.allActions);
+      s('modlog-sort-desc', tx.sortDesc); s('modlog-sort-asc', tx.sortAsc);
+
+      // Placeholders
+      p('user-search', tx.searchUser); p('books-search', tx.searchBooks);
+      p('reviews-search', tx.searchReviews); p('modlog-search', tx.searchModlog);
+
+      // Pending panel
+      const pendNav = document.getElementById('nav-pending-lbl');
+      const pendTitle = document.getElementById('pending-title');
+      const pendingLabel = lang==='ru'?'📨 На проверке':lang==='en'?'📨 Pending Review':'📨 Gaida apstiprinājumu';
+      if (pendNav) pendNav.textContent = lang==='ru'?'На проверке':lang==='en'?'Pending Review':'Gaida apstiprinājumu';
+      if (pendTitle) pendTitle.textContent = pendingLabel;
+    }
+
+    // Hook language change
+    const _origAdminSet = i18n.set.bind(i18n);
+    i18n.set = function(lang) {
+      _origAdminSet(lang);
+      applyAdminI18n();
+      // Reload current panel
+      if (currentPanel === 'stats')   loadStats();
+      else if (currentPanel === 'users')   loadUsers();
+      else if (currentPanel === 'books')   loadAdminBooks();
+      else if (currentPanel === 'reviews') loadAdminReviews();
+      else if (currentPanel === 'modlog')  loadModlog();
+      else if (currentPanel === 'pending') loadPending();
+    };
+
+    // Modlog filter listeners
+    document.addEventListener('input', (e) => {
+      if (e.target.id === 'user-search') {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => { usersPage = 1; loadUsers(); }, 400);
+      }
+      if (e.target.id === 'books-search') {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => loadAdminBooks(), 300);
+      }
+      if (e.target.id === 'reviews-search') {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => loadAdminReviews(), 300);
+      }
+      if (e.target.id === 'modlog-search') {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => applyModlogFilters(), 300);
+      }
+    });
+    document.addEventListener('change', (e) => {
+      if (e.target.id === 'user-role-filter') { usersPage = 1; loadUsers(); }
+      if (e.target.id === 'modlog-action-filter' || e.target.id === 'modlog-sort') applyModlogFilters();
+    });
+
+    applyAdminI18n();
+    loadStats();
+  </script>
+</body>
+</html>

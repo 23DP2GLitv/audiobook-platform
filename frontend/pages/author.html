@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Autors — AudioBooks</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/player.css">
+  <style>
+    .author-hero {
+      background: linear-gradient(180deg, rgba(245,158,11,0.06) 0%, transparent 100%);
+      padding: 56px 0 48px;
+    }
+    .author-profile {
+      display: flex;
+      align-items: center;
+      gap: 36px;
+      flex-wrap: wrap;
+    }
+    .author-avatar-lg {
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--border-amber);
+      flex-shrink: 0;
+    }
+    .author-avatar-ph-lg {
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--amber-dark), var(--amber));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3rem; font-weight: 700; color: #000;
+      flex-shrink: 0;
+    }
+    .author-name { font-size: clamp(1.6rem, 4vw, 2.4rem); margin-bottom: 8px; }
+    .author-bio  { color: var(--text-secondary); line-height: 1.7; max-width: 600px; margin-top: 12px; }
+    .author-stats-row {
+      display: flex;
+      gap: 32px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .author-stat { text-align: center; }
+    .author-stat-num { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; }
+    .author-stat-label { font-size: 0.75rem; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+  <div class="main-content">
+    <div id="loading" class="loading-block" style="min-height:50vh"><div class="spinner"></div></div>
+    <div id="author-content" style="display:none">
+      <div class="author-hero">
+        <div class="container">
+          <div class="author-profile" id="author-profile"></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="container">
+          <div class="section-header">
+            <h2 class="section-title" data-i18n="nav_my_books">Grāmatas</h2>
+            <span class="badge badge-gray" id="books-count"></span>
+          </div>
+          <div class="books-grid" id="author-books"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/i18n.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/player.js"></script>
+  <script src="../js/nav.js"></script>
+  <script>
+    const authorId = new URLSearchParams(window.location.search).get('id');
+
+    function formatDur(sec) {
+      if (!sec || isNaN(sec)) return '';
+      const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = Math.floor(sec%60);
+      return h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`;
+    }
+
+    async function loadAuthor() {
+      if (!authorId) { window.location.href = 'catalog.html'; return; }
+      try {
+        const { user, books } = await api.users.get(authorId);
+        document.title = `${user.username} — AudioBooks`;
+
+        const avgRating = books.length
+          ? (books.reduce((s,b)=>s+parseFloat(b.rating||0),0)/books.length).toFixed(1)
+          : 0;
+
+        const avatarHtml = user.avatar_url
+          ? `<img class="author-avatar-lg" src="http://localhost:3000${user.avatar_url}" alt="">`
+          : `<div class="author-avatar-ph-lg">${(user.username||'?')[0].toUpperCase()}</div>`;
+
+        document.getElementById('author-profile').innerHTML = `
+          ${avatarHtml}
+          <div>
+            <h1 class="author-name">${user.username}</h1>
+            <div style="color:var(--text-muted);font-size:0.85rem">
+              Reģistrējies: ${new Date(user.registered_at).toLocaleDateString()}
+            </div>
+            ${user.bio ? `<p class="author-bio">${user.bio}</p>` : ''}
+            <div class="author-stats-row">
+              <div class="author-stat">
+                <div class="author-stat-num">${books.length}</div>
+                <div class="author-stat-label" data-i18n="books_published_stat">Grāmatas</div>
+              </div>
+              <div class="author-stat">
+                <div class="author-stat-num">${avgRating}</div>
+                <div class="author-stat-label">Vidējais reitings</div>
+              </div>
+              ${user.books_published ? `<div class="author-stat">
+                <div class="author-stat-num">${user.books_published}</div>
+                <div class="author-stat-label">Publicētas</div>
+              </div>` : ''}
+            </div>
+          </div>`;
+
+        const lang = i18n.current;
+        document.getElementById('books-count').textContent = books.length;
+        document.getElementById('author-books').innerHTML = books.map(b => `
+          <div class="book-card card" onclick="location.href='book.html?id=${b.id}'">
+            ${b.cover_url
+              ? `<img class="book-cover" src="http://localhost:3000${b.cover_url}" alt="${b.title}" loading="lazy">`
+              : `<div class="book-cover-placeholder">📚</div>`}
+            <button class="book-card-play" onclick="event.stopPropagation(); quickPlay(${b.id})">▶</button>
+            <div class="book-card-body">
+              <div class="book-card-title">${b.title}</div>
+              <div class="book-card-meta">
+                ${b.rating>0?`<span class="book-card-rating">⭐ ${parseFloat(b.rating).toFixed(1)}</span>`:''}
+                ${b.duration_sec?`<span>⏱ ${formatDur(b.duration_sec)}</span>`:''}
+              </div>
+            </div>
+          </div>`).join('');
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('author-content').style.display = 'block';
+      } catch (e) {
+        document.getElementById('loading').innerHTML =
+          `<div class="empty-state"><div class="empty-state-icon">😕</div><h3>${e.message}</h3></div>`;
+      }
+    }
+
+    async function quickPlay(bookId) {
+      if (!api.isLoggedIn()) { showToast(t('login_required'), 'info'); return; }
+      try {
+        const { book } = await api.books.get(bookId);
+        Player.play(book, book.parts, 0, book.user_progress?.progress_sec || 0);
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    loadAuthor();
+  </script>
+</body>
+</html>

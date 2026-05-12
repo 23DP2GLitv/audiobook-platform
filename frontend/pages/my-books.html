@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manas Grāmatas — AudioBooks</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/player.css">
+  <style>
+    .my-books-page { padding: 48px 0 80px; }
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .book-row {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      margin-bottom: 12px;
+      transition: all var(--transition);
+    }
+    .book-row:hover { border-color: var(--border-amber); }
+    .book-row-cover {
+      width: 60px; height: 90px;
+      border-radius: var(--radius-sm);
+      object-fit: cover;
+      background: var(--bg-elevated);
+      flex-shrink: 0;
+    }
+    .book-row-cover-ph {
+      width: 60px; height: 90px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-elevated);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem; flex-shrink: 0;
+    }
+    .book-row-info { flex: 1; min-width: 0; overflow: hidden; }
+    .book-row-title {
+      font-family: var(--font-display);
+      font-size: 1rem; font-weight: 600;
+      margin-bottom: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .book-row-title:hover { color: var(--amber); }
+    .book-row-meta { font-size: 0.8rem; color: var(--text-muted); display: flex; gap: 12px; flex-wrap: wrap; }
+    .book-row-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .vis-badge {
+      font-size: 0.72rem; padding: 2px 8px;
+      border-radius: 10px;
+    }
+    .vis-public { background: rgba(34,197,94,0.1); color: #22C55E; }
+    .vis-private { background: rgba(100,100,100,0.15); color: var(--text-muted); }
+  </style>
+</head>
+<body>
+  <div class="main-content">
+    <div class="container">
+      <div class="my-books-page">
+        <div class="page-header">
+          <h1 class="section-title" data-i18n="nav_my_books">Manas Grāmatas</h1>
+          <a href="upload.html" class="btn btn-primary">🎙️ <span data-i18n="nav_upload">Augšupielādēt</span></a>
+        </div>
+        <div id="books-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/i18n.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/player.js"></script>
+  <script src="../js/nav.js"></script>
+  <script src="../js/confirm-modal.js"></script>
+  <script>
+    if (!api.isLoggedIn()) window.location.href = 'login.html';
+
+    function formatDur(sec) {
+      if (!sec || isNaN(sec)) return '0:00';
+      const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = Math.floor(sec%60);
+      return h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`;
+    }
+
+    async function loadMyBooks() {
+      const el = document.getElementById('books-list');
+      el.innerHTML = '<div class="spinner"></div>';
+      try {
+        const { books } = await api.users.myBooks();
+        if (!books.length) {
+          el.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <h3>Nav publicētu grāmatu</h3>
+            <p style="margin-top:8px"><a href="upload.html" class="btn btn-primary" style="margin-top:16px">Augšupielādēt pirmo grāmatu</a></p>
+          </div>`;
+          return;
+        }
+        const lang = i18n.current;
+        const pubLabel  = lang==='ru'?'🌐 Публично':lang==='en'?'🌐 Public':'🌐 Publiski';
+        const privLabel = lang==='ru'?'🔒 Приватно':lang==='en'?'🔒 Private':'🔒 Privāti';
+        const pendLabel = lang==='ru'?'⏳ На проверке':lang==='en'?'⏳ Pending':'⏳ Pārbaudē';
+        const rejLabel  = lang==='ru'?'❌ Отклонено':lang==='en'?'❌ Rejected':'❌ Noraidīts';
+        el.innerHTML = books.map(b => {
+          let statusBadge;
+          if (b.moderation_status === 'pending') {
+            statusBadge = `<span class="vis-badge" style="background:rgba(251,191,36,.15);color:#F59E0B;border:1px solid rgba(251,191,36,.3)">${pendLabel}</span>`;
+          } else if (b.moderation_status === 'rejected') {
+            const reason = (b.moderation_reason || '').replace(/'/g, "\\'");
+            statusBadge = `<span class="vis-badge" style="background:rgba(239,68,68,.12);color:#EF4444;border:1px solid rgba(239,68,68,.3);cursor:pointer"
+              onclick="showRejectionReason('${reason}')">${rejLabel} ℹ</span>`;
+          } else {
+            statusBadge = `<span class="vis-badge ${b.is_public ? 'vis-public' : 'vis-private'}">${b.is_public ? pubLabel : privLabel}</span>`;
+          }
+          return `
+          <div class="book-row">
+            ${b.cover_url
+              ? `<img class="book-row-cover" src="http://localhost:3000${b.cover_url}" alt="">`
+              : `<div class="book-row-cover-ph">📚</div>`}
+            <div class="book-row-info">
+              <div class="book-row-title" onclick="${b.moderation_status==='approved'?`location.href='book.html?id=${b.id}'`:''}" style="cursor:${b.moderation_status==='approved'?'pointer':'default'}">${b.title}</div>
+              <div class="book-row-meta">
+                <span>⭐ ${parseFloat(b.rating||0).toFixed(1)}</span>
+                <span>👁 ${b.listen_count}</span>
+                ${b.duration_sec ? `<span>⏱ ${formatDur(b.duration_sec)}</span>` : ''}
+                ${b['genre_'+lang] ? `<span>${b['genre_'+lang]}</span>` : ''}
+                ${statusBadge}
+              </div>
+            </div>
+            <div class="book-row-actions">
+              ${b.moderation_status === 'approved' ? `<a href="edit-book.html?id=${b.id}" class="btn btn-secondary btn-sm">✏️</a>` : ''}
+              <button class="btn btn-danger btn-sm" onclick="deleteBook(${b.id}, this)">🗑</button>
+            </div>
+          </div>`;
+        }).join('');
+      } catch (e) {
+        el.innerHTML = `<p class="text-muted">${e.message}</p>`;
+      }
+    }
+
+    async function deleteBook(id, btn) {
+      const ok = await confirmModal({
+        title: t('confirm_delete'),
+        text: i18n.current==='ru'?'Книга будет удалена.':i18n.current==='en'?'Book will be deleted.':'Grāmata tiks dzēsta.',
+        icon: '🗑️',
+      });
+      if (!ok) return;
+      btn.disabled = true;
+      try {
+        await api.books.delete(id);
+        showToast(t('delete') + '!', 'success');
+        loadMyBooks();
+      } catch (e) { showToast(e.message, 'error'); btn.disabled = false; }
+    }
+
+    function showRejectionReason(reason) {
+      const lang = i18n.current;
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px';
+      overlay.innerHTML = `
+        <div style="background:var(--bg-elevated);border:1px solid rgba(239,68,68,.3);border-radius:var(--radius-xl);padding:32px;max-width:480px;width:100%">
+          <div style="font-size:1.3rem;font-family:var(--font-display);margin-bottom:16px">❌ ${lang==='ru'?'Причина отклонения':lang==='en'?'Rejection reason':'Noraidīšanas iemesls'}</div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:16px;font-size:0.9rem;color:var(--text-secondary);line-height:1.6;word-break:break-word">${reason || '—'}</div>
+          <button id="rej-close" class="btn btn-secondary" style="margin-top:20px;width:100%">${lang==='ru'?'Закрыть':lang==='en'?'Close':'Aizvērt'}</button>
+        </div>`;
+      document.body.appendChild(overlay);
+      document.getElementById('rej-close').addEventListener('click', () => overlay.remove());
+      overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    }
+
+    const _orig = i18n.set.bind(i18n);
+    i18n.set = function(lang) { _orig(lang); loadMyBooks(); };
+
+    loadMyBooks();
+  </script>
+</body>
+</html>
