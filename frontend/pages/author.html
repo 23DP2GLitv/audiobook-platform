@@ -85,12 +85,10 @@
         const { user, books } = await api.users.get(authorId);
         document.title = `${user.username} — AudioBooks`;
 
-        const avgRating = books.length
-          ? (books.reduce((s,b)=>s+parseFloat(b.rating||0),0)/books.length).toFixed(1)
-          : 0;
+        const avgRating = parseFloat(user.avg_rating) > 0 ? user.avg_rating : '—';
 
         const avatarHtml = user.avatar_url
-          ? `<img class="author-avatar-lg" src="${window.location.origin + user.avatar_url}" alt="">`
+          ? `<img class="author-avatar-lg" src="${user.avatar_url}" alt="">`
           : `<div class="author-avatar-ph-lg">${(user.username||'?')[0].toUpperCase()}</div>`;
 
         document.getElementById('author-profile').innerHTML = `
@@ -122,7 +120,7 @@
         document.getElementById('author-books').innerHTML = books.map(b => `
           <div class="book-card card" onclick="location.href='book.html?id=${b.id}'">
             ${b.cover_url
-              ? `<img class="book-cover" src="${window.location.origin + b.cover_url}" alt="${b.title}" loading="lazy">`
+              ? `<img class="book-cover" src="${b.cover_url}" alt="${b.title}" loading="lazy">`
               : `<div class="book-cover-placeholder">📚</div>`}
             <button class="book-card-play" onclick="event.stopPropagation(); quickPlay(${b.id})">▶</button>
             <div class="book-card-body">

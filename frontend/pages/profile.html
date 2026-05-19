@@ -217,7 +217,7 @@
     function renderHeader(user) {
       const role_labels = { user: t('role_user'), moderator: t('role_moderator'), admin: t('role_admin') };
       const avatarHtml = user.avatar_url
-        ? `<img class="profile-avatar-img" src="${window.location.origin + user.avatar_url}" alt="">`
+        ? `<img class="profile-avatar-img" src="${user.avatar_url}" alt="">`
         : `<div class="profile-avatar-placeholder">${(user.username||'?')[0].toUpperCase()}</div>`;
 
       document.getElementById('profile-header').innerHTML = `

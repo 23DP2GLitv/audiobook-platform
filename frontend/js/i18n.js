@@ -18,7 +18,7 @@ const TRANSLATIONS = {
 
     // Hero
     hero_title: 'Klausies. Veido. Dalies.',
-    hero_subtitle: 'Platforma audiogrāmatu klausīšanai un veidošanai latviešu, krievu un angļu valodā.',
+    hero_subtitle: 'Atrodi savu nākamo mīļāko grāmatu — audiogrāmatas visās pasaules valodās un visām gaumēm.',
     hero_cta_browse: 'Skatīt Katalogs',
     hero_cta_upload: 'Augšupielādēt Grāmatu',
 
@@ -171,7 +171,7 @@ const TRANSLATIONS = {
     nav_my_books: 'Мои Книги',
 
     hero_title: 'Слушай. Создавай. Делись.',
-    hero_subtitle: 'Платформа для аудиокниг на латышском, русском и английском языках.',
+    hero_subtitle: 'Найди свою следующую любимую книгу — аудиокниги на всех языках мира и на любой вкус.',
     hero_cta_browse: 'Смотреть Каталог',
     hero_cta_upload: 'Загрузить Книгу',
 
@@ -312,7 +312,7 @@ const TRANSLATIONS = {
     nav_my_books: 'My Books',
 
     hero_title: 'Listen. Create. Share.',
-    hero_subtitle: 'An audiobook platform for Latvian, Russian and English content — created by readers, for readers.',
+    hero_subtitle: 'Find your next favourite book — audiobooks in all languages of the world and for every taste.',
     hero_cta_browse: 'Browse Catalog',
     hero_cta_upload: 'Upload a Book',
 

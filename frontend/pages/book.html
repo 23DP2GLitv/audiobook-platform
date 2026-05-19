@@ -146,7 +146,7 @@
         <div class="container">
           <div class="book-layout">
             <div class="book-cover-wrap">
-              <img id="book-cover" class="book-cover-img" src="" alt="" onerror="this.style.display='none'">
+              <img id="book-cover" class="book-cover-img" src="" alt="" style="display:none" onerror="this.style.display='none';document.getElementById('book-cover-placeholder').style.display='flex'">
               <div id="book-cover-placeholder" class="book-cover-placeholder-lg" style="display:none">📚</div>
             </div>
             <div>
@@ -224,11 +224,15 @@
 
     function renderBook(book) {
       // Cover
+      const coverEl = document.getElementById('book-cover');
+      const placeholderEl = document.getElementById('book-cover-placeholder');
       if (book.cover_url) {
-        document.getElementById('book-cover').src = window.location.origin + book.cover_url;
+        coverEl.src = book.cover_url;
+        coverEl.style.display = 'block';
+        placeholderEl.style.display = 'none';
       } else {
-        document.getElementById('book-cover').style.display = 'none';
-        document.getElementById('book-cover-placeholder').style.display = 'flex';
+        coverEl.style.display = 'none';
+        placeholderEl.style.display = 'flex';
       }
 
       document.getElementById('book-title').textContent = book.title;

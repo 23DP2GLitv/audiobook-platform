@@ -191,7 +191,7 @@
       const avatar = document.getElementById('nav-avatar');
       const placeholder = document.getElementById('nav-avatar-placeholder');
       if (user.avatar_url && avatar) {
-        avatar.src = window.location.origin + user.avatar_url;
+        avatar.src = user.avatar_url;
         avatar.classList.remove('hidden');
         placeholder?.classList.add('hidden');
       } else if (placeholder) {

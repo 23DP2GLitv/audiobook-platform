@@ -59,9 +59,7 @@ const Player = (() => {
     // Book info
     const cover = el.cover();
     if (cover) {
-      cover.src = currentBook.cover_url
-        ? `window.location.origin +currentBook.cover_url}`
-        : '';
+      cover.src = currentBook.cover_url ? currentBook.cover_url : '';
       if (!currentBook.cover_url) cover.style.display = 'none';
     }
     if (el.title()) el.title().textContent = currentBook.title;

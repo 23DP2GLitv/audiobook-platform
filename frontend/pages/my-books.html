@@ -123,7 +123,7 @@
           return `
           <div class="book-row">
             ${b.cover_url
-              ? `<img class="book-row-cover" src="${window.location.origin + b.cover_url}" alt="">`
+              ? `<img class="book-row-cover" src="${b.cover_url}" alt="">`
               : `<div class="book-row-cover-ph">📚</div>`}
             <div class="book-row-info">
               <div class="book-row-title" onclick="${b.moderation_status==='approved'?`location.href='book.html?id=${b.id}'`:''}" style="cursor:${b.moderation_status==='approved'?'pointer':'default'}">${b.title}</div>

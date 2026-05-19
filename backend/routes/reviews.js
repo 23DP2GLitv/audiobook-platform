@@ -33,6 +33,17 @@ router.get('/', async (req, res) => {
   }
 });
 
+// ── Helper: recalculate book rating ──────────────────────
+async function recalcRating(pool, bookId) {
+  await pool.query(
+    `UPDATE audiobooks SET
+       rating       = COALESCE((SELECT AVG(rating) FROM reviews WHERE audiobook_id = ? AND is_deleted = 0), 0),
+       review_count = (SELECT COUNT(*) FROM reviews WHERE audiobook_id = ? AND is_deleted = 0)
+     WHERE id = ?`,
+    [bookId, bookId, bookId]
+  );
+}
+
 // ── POST /api/books/:id/reviews ────────────────────────────
 router.post('/', authenticate, async (req, res) => {
   try {
@@ -75,6 +86,10 @@ router.post('/', authenticate, async (req, res) => {
        JOIN users u ON u.id = r.user_id WHERE r.id = ?`,
       [reviewId]
     );
+
+    // Recalculate rating
+    await recalcRating(pool, bookId);
+
     res.status(201).json({ review: rows[0] });
   } catch (err) {
     console.error(err);
@@ -97,6 +112,9 @@ router.delete('/:reviewId', authenticate, async (req, res) => {
       'UPDATE reviews SET is_deleted = 1, delete_reason = ? WHERE id = ?',
       [req.body.reason || null, req.params.reviewId]
     );
+
+    // Recalculate rating
+    await recalcRating(pool, rows[0].audiobook_id);
 
     if (isMod && !isOwner) {
       await pool.query(

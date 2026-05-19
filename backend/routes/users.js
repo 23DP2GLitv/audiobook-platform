@@ -10,27 +10,38 @@ const router = express.Router();
 router.get('/:id', optionalAuth, async (req, res) => {
   try {
     const [rows] = await pool.query(
-      `SELECT u.id, u.username, u.avatar_url, u.bio, u.registered_at,
-              s.books_published, s.books_listened, s.total_hours
+      `SELECT u.id, u.username, u.avatar_url, u.bio, u.registered_at
        FROM users u
-       LEFT JOIN user_stats s ON s.user_id = u.id
        WHERE u.id = ? AND u.is_blocked = 0`,
       [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'User not found' });
 
+    // Only show public + approved books to other users
+    const isOwner = req.user?.id === parseInt(req.params.id);
     const [books] = await pool.query(
-      `SELECT b.id, b.title, b.cover_url, b.rating, b.listen_count, b.duration_sec, b.published_at,
+      `SELECT b.id, b.title, b.cover_url, b.rating, b.review_count, b.listen_count, b.duration_sec, b.published_at,
               g.name_lv AS genre_lv, g.name_ru AS genre_ru, g.name_en AS genre_en
        FROM audiobooks b
        LEFT JOIN genres g ON g.id = b.genre_id
-       WHERE b.author_id = ? AND b.is_public = 1 AND b.is_deleted = 0
+       WHERE b.author_id = ?
+         AND b.is_deleted = 0
+         ${isOwner ? '' : "AND b.is_public = 1 AND b.moderation_status = 'approved'"}
        ORDER BY b.published_at DESC`,
       [req.params.id]
     );
 
-    res.json({ user: rows[0], books });
+    // Average rating only from books that have reviews
+    const [[{ avg_rating }]] = await pool.query(
+      `SELECT COALESCE(AVG(rating), 0) AS avg_rating
+       FROM audiobooks
+       WHERE author_id = ? AND is_deleted = 0 AND review_count > 0`,
+      [req.params.id]
+    );
+
+    res.json({ user: { ...rows[0], avg_rating: parseFloat(avg_rating).toFixed(1) }, books });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Failed to fetch user' });
   }
 });
