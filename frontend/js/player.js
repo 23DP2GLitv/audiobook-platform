@@ -60,7 +60,7 @@ const Player = (() => {
     const cover = el.cover();
     if (cover) {
       cover.src = currentBook.cover_url
-        ? `http://localhost:3000${currentBook.cover_url}`
+        ? `window.location.origin +currentBook.cover_url}`
         : '';
       if (!currentBook.cover_url) cover.style.display = 'none';
     }

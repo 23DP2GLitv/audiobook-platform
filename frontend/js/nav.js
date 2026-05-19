@@ -4,15 +4,15 @@
 (function () {
   const NAV_HTML = `
 <nav class="navbar" id="navbar">
-  <a href="/frontend/pages/index.html" class="nav-logo">
+  <a href="/pages/index.html" class="nav-logo">
     <span>📚</span> AudioBooks
   </a>
 
   <div class="nav-links" id="nav-links">
-    <a href="/frontend/pages/index.html"   class="nav-link" data-i18n="nav_home"></a>
-    <a href="/frontend/pages/catalog.html" class="nav-link" data-i18n="nav_catalog"></a>
-    <a href="/frontend/pages/upload.html"  class="nav-link nav-auth-only hidden" data-i18n="nav_upload"></a>
-    <a href="/frontend/pages/admin.html"   class="nav-link nav-mod-only hidden"  data-i18n="nav_admin"></a>
+    <a href="/pages/index.html"   class="nav-link" data-i18n="nav_home"></a>
+    <a href="/pages/catalog.html" class="nav-link" data-i18n="nav_catalog"></a>
+    <a href="/pages/upload.html"  class="nav-link nav-auth-only hidden" data-i18n="nav_upload"></a>
+    <a href="/pages/admin.html"   class="nav-link nav-mod-only hidden"  data-i18n="nav_admin"></a>
   </div>
 
   <div class="nav-right">
@@ -25,8 +25,8 @@
 
     <!-- Guest buttons -->
     <div id="nav-guest" class="flex gap-8">
-      <a href="/frontend/pages/login.html"    class="btn btn-ghost btn-sm" data-i18n="nav_login"></a>
-      <a href="/frontend/pages/register.html" class="btn btn-primary btn-sm" data-i18n="nav_register"></a>
+      <a href="/pages/login.html"    class="btn btn-ghost btn-sm" data-i18n="nav_login"></a>
+      <a href="/pages/register.html" class="btn btn-primary btn-sm" data-i18n="nav_register"></a>
     </div>
 
     <!-- User dropdown -->
@@ -36,9 +36,9 @@
         <img id="nav-avatar" class="nav-avatar hidden" src="" alt="">
       </button>
       <div class="dropdown-menu" id="nav-dropdown" style="display:none">
-        <a href="/frontend/pages/profile.html" class="dropdown-item">👤 <span data-i18n="nav_profile"></span></a>
-        <a href="/frontend/pages/my-books.html" class="dropdown-item">🎙️ <span data-i18n="nav_my_books"></span></a>
-        <a href="/frontend/pages/history.html"  class="dropdown-item">🕐 <span data-i18n="nav_history"></span></a>
+        <a href="/pages/profile.html" class="dropdown-item">👤 <span data-i18n="nav_profile"></span></a>
+        <a href="/pages/my-books.html" class="dropdown-item">🎙️ <span data-i18n="nav_my_books"></span></a>
+        <a href="/pages/history.html"  class="dropdown-item">🕐 <span data-i18n="nav_history"></span></a>
         <div class="dropdown-divider"></div>
         <button class="dropdown-item danger" id="nav-logout-btn">🚪 <span data-i18n="nav_logout"></span></button>
       </div>
@@ -191,7 +191,7 @@
       const avatar = document.getElementById('nav-avatar');
       const placeholder = document.getElementById('nav-avatar-placeholder');
       if (user.avatar_url && avatar) {
-        avatar.src = 'http://localhost:3000' + user.avatar_url;
+        avatar.src = window.location.origin + user.avatar_url;
         avatar.classList.remove('hidden');
         placeholder?.classList.add('hidden');
       } else if (placeholder) {
@@ -226,7 +226,7 @@
     // Logout
     if (e.target.closest('#nav-logout-btn')) {
       api.clearAuth();
-      window.location.href = '/frontend/pages/index.html';
+      window.location.href = '/pages/index.html';
     }
 
     // Mobile menu

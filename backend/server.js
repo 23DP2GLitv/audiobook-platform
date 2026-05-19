@@ -16,11 +16,7 @@ const PORT = process.env.PORT || 3000;
 
 // ── CORS ───────────────────────────────────────────────────
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:5500',
-    'http://127.0.0.1:5500',
-    'http://localhost:5501',
-  ],
+  origin: '*',
   credentials: true,
 }));
 
@@ -30,6 +26,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ── Static uploads ─────────────────────────────────────────
 app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
+
+// ── Serve frontend ─────────────────────────────────────────
+app.use(express.static(path.resolve(__dirname, '../frontend')));
 
 // ── Rate limiting ──────────────────────────────────────────
 const apiLimiter = rateLimit({

@@ -208,7 +208,7 @@
 
   function renderBookCard(book) {
     const cover = book.cover_url
-      ? `<img class="book-cover" src="http://localhost:3000${book.cover_url}" alt="${book.title}" loading="lazy">`
+      ? `<img class="book-cover" src="${window.location.origin + book.cover_url}" alt="${book.title}" loading="lazy">`
       : `<div class="book-cover-placeholder">📚</div>`;
     const stars = book.rating > 0 ? `<span class="book-card-rating">⭐ ${parseFloat(book.rating).toFixed(1)}</span>` : '';
     const dur = book.duration_sec > 0 ? formatTime(book.duration_sec) : '';

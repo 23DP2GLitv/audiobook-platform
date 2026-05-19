@@ -1,7 +1,7 @@
 // frontend/js/api.js
 // Centralised API client — all requests go through here
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = window.location.origin + '/api';
 
 const api = {
   // ── Auth helpers ─────────────────────────────────────────
@@ -40,7 +40,7 @@ const api = {
         if (res.status === 401 && !endpoint.includes('/password')) {
           this.clearAuth();
           if (!window.location.pathname.includes('login')) {
-            window.location.href = '/frontend/pages/login.html';
+            window.location.href = '/pages/login.html';
           }
         }
         throw { status: res.status, message: data.error || 'Request failed' };

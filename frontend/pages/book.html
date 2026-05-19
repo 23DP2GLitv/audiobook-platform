@@ -225,7 +225,7 @@
     function renderBook(book) {
       // Cover
       if (book.cover_url) {
-        document.getElementById('book-cover').src = 'http://localhost:3000' + book.cover_url;
+        document.getElementById('book-cover').src = window.location.origin + book.cover_url;
       } else {
         document.getElementById('book-cover').style.display = 'none';
         document.getElementById('book-cover-placeholder').style.display = 'flex';

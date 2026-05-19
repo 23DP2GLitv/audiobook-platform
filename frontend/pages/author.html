@@ -90,7 +90,7 @@
           : 0;
 
         const avatarHtml = user.avatar_url
-          ? `<img class="author-avatar-lg" src="http://localhost:3000${user.avatar_url}" alt="">`
+          ? `<img class="author-avatar-lg" src="${window.location.origin + user.avatar_url}" alt="">`
           : `<div class="author-avatar-ph-lg">${(user.username||'?')[0].toUpperCase()}</div>`;
 
         document.getElementById('author-profile').innerHTML = `
@@ -122,7 +122,7 @@
         document.getElementById('author-books').innerHTML = books.map(b => `
           <div class="book-card card" onclick="location.href='book.html?id=${b.id}'">
             ${b.cover_url
-              ? `<img class="book-cover" src="http://localhost:3000${b.cover_url}" alt="${b.title}" loading="lazy">`
+              ? `<img class="book-cover" src="${window.location.origin + b.cover_url}" alt="${b.title}" loading="lazy">`
               : `<div class="book-cover-placeholder">📚</div>`}
             <button class="book-card-play" onclick="event.stopPropagation(); quickPlay(${b.id})">▶</button>
             <div class="book-card-body">
